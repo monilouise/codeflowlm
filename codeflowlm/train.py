@@ -11,11 +11,8 @@ from codeflowlm.data import ord_cross_changes_full, path, df_features_full
 from codeflowlm.latency_verification import add_first_fix_date, do_latency_verification, do_real_latency_verification, process_buggy_commit
 from codeflowlm.metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
-from codeflowlm.test import prepare_cumulative_test_data
 from codeflowlm.test import test
-from codeflowlm.threshold import analyze_results
 from codeflowlm.threshold import calculate_th_from_test
-from codeflowlm.global_training_pool import get_global_training_pool
 
 projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'commons-codec','commons-collections',
@@ -222,16 +219,6 @@ def add_to_cumulative_training_pool(row, global_training_pool):
       return
 
   global_training_pool.append(row)
-  #print("Cunulative training pool size = ", len(global_training_pool))
-
-def add_batch_to_cumulative_training_pool(batch):
-  global_training_pool = get_global_training_pool()
-
-  for row in batch:
-    add_to_cumulative_training_pool(row, global_training_pool)
-
-  with open('global_training_pool.pkl', 'wb') as f:
-    pickle.dump(global_training_pool, f)
 
 def train(project, model_path, training_pool, 
           use_only_new_data=True, th=0.5, adjust_th=False,
@@ -317,8 +304,6 @@ def train(project, model_path, training_pool,
 
       if file_contents == 'changed':
         print(f"File '{file_to_monitor}' has changed!")
-        #Keeps data used for training
-        add_batch_to_cumulative_training_pool(training_pool)
         #Clear training pool
         training_pool.clear()
         trained += len(set([sample['commit_hash'] for sample in training_pool]))
@@ -326,47 +311,7 @@ def train(project, model_path, training_pool,
       else:
         print(f"File '{file_to_monitor}' has not changed.  Keeping training data.")
 
-  #Test on cumulative training data to generate the probs and calculate the new threshold
-  if model_updated and adjust_th and (not adjust_th_on_test):
-    if os.path.exists('results.xlsx'):
-      os.remove('results.xlsx')
-
-    if USE_GLOBAL_DATA_FOR_TH == True:
-      changes_file, features_file = prepare_cumulative_test_data(project)
-    else:
-      changes_file = changes_valid_file
-      features_file = features_valid_file
-
-    command = f"""
-    python PEFT4CC/just-in-time/run_{peft_alg}.py \
-    --test_data_file {changes_file} {features_file} \
-    --output_dir {model_path} \
-    --pretrained_model {pretrained_model} \
-    --batch_size 16 \
-    --hidden_size 1024 \
-    --do_test \
-    --threshold {th} \
-    --calculate_metrics \
-    """
-
-    print(f"Calculating new threshold with eval metric = {eval_metric}...")
-
-    if eval_metric == "gmean":
-      command += "--eval_metric gmean "
-
-    if pretrained_model == 'codet5p-770m':
-      command += """--hidden_size 1024 """
-
-    if peft_alg == "lora":
-      command += """--use_lora """
-
-    execute_command(command)
-
-    op_th = analyze_results()
-    print("New threshold = ", op_th)
-    return op_th, trained
-  else:
-    return th, trained
+  return th, trained
 
 def train_on_line_with_new_data(project, df_project, model_path, training_pool,
                                 training_queue, 
