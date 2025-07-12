@@ -23,8 +23,6 @@ projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'parquet-mr']
 
 batches = []
-USE_GLOBAL_DATA_FOR_TH = True
-
 
 #From a given df_train (a segment from the stream), a training pool, a training
 #queue and a buggy pool, move rows to/from training queue/training pool/buggy
@@ -393,13 +391,15 @@ def train_on_line_with_new_data(path, full_changes_train_file, full_changed_vali
     if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
       if adjust_th_on_test:
         print("Calculating new th...")
-        _, predictions = test(path, project, df_test[-window_size:], model_path,
+        _, predictions = test(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
+                              project, df_test[-window_size:], model_path,
                               th=th, pretrained_model=pretrained_model,
                               calculate_metrics=calculate_metrics,
                               eval_metric=eval_metric)
         th = calculate_th_from_test(predictions, target_th=target_th)
 
-      results, predictions = test(path, project, df_test, model_path, th=th,
+      results, predictions = test(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
+                                  project, df_test, model_path, th=th,
                                   pretrained_model=pretrained_model,
                                   calculate_metrics=calculate_metrics,
                                   eval_metric=eval_metric)

@@ -28,11 +28,12 @@ def get_ord_cross_changes_full(full_changes_train_file, full_changed_valid_file,
                           ord_cross_changes_train[2] + ord_cross_changes_valid[2] + ord_cross_changes_test[2], ord_cross_changes_train[3] + ord_cross_changes_valid[3] + ord_cross_changes_test[3]]
     return ord_cross_changes_full
 
-def get_changes_from_features(df_features, do_test=True):
+def get_changes_from_features(full_changes_train_file, full_changed_valid_file, full_changes_test_file, df_features, do_test=True):
   commits = []
   labels = []
   commit_messages = []
   codes = []
+  ord_cross_changes_full = get_ord_cross_changes_full(full_changes_train_file, full_changed_valid_file, full_changes_test_file)
 
   for _, row in df_features.iterrows():
       commit_id = row['commit_hash']
