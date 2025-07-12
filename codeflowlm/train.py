@@ -1,4 +1,3 @@
-from tqdm import tqdm
 import pandas as pd
 import pickle
 import os
@@ -7,7 +6,7 @@ import time
 import traceback
 import shutil
 from codeflowlm.command import execute_command
-from codeflowlm.data import ord_cross_changes_full, path, df_features_full
+from codeflowlm.data import ord_cross_changes_full, df_features_full
 from codeflowlm.latency_verification import add_first_fix_date, do_latency_verification, do_real_latency_verification, process_buggy_commit
 from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
@@ -63,7 +62,7 @@ def is_valid_training_data(training_pool):
   #07/07/2025: pelo menos um exemplo positivo e um exemplo negativo
   return df.shape[0] > 0 and df['is_buggy_commit'].sum() >= 1 and df['is_buggy_commit'].sum() < df.shape[0]
 
-def prepare_training_data(project, df, do_eval_with_all_negative=False):
+def prepare_training_data(path, project, df, do_eval_with_all_negative=False):
   if 'first_fix_date' in df.columns and 'fixes' in df.columns:
     df = df.drop(columns=['first_fix_date', 'fixes'])
 
@@ -220,7 +219,7 @@ def add_to_cumulative_training_pool(row, global_training_pool):
 
   global_training_pool.append(row)
 
-def train(project, model_path, training_pool, 
+def train(path, project, model_path, training_pool, 
           use_only_new_data=True, th=0.5, adjust_th=False,
           eval_metric="f1", do_oversample=False, do_undersample=False,
           pretrained_model='codet5p-770m', trained=0,
@@ -234,7 +233,7 @@ def train(project, model_path, training_pool,
 
   print("Training pool size = ", df.shape[0])
 
-  changes_train_file, features_train_file, changes_valid_file, features_valid_file = prepare_training_data(project, df)
+  changes_train_file, features_train_file, changes_valid_file, features_valid_file = prepare_training_data(path, project, df)
 
   batches.append(df)
 
@@ -313,7 +312,7 @@ def train(project, model_path, training_pool,
 
   return th, trained
 
-def train_on_line_with_new_data(project, df_project, model_path, training_pool,
+def train_on_line_with_new_data(path, project, df_project, model_path, training_pool,
                                 training_queue, 
                                 map_commit_to_row, buggy_pool=[],
                                 training_examples=50, th=0.5, adjust_th=False,
@@ -366,7 +365,7 @@ def train_on_line_with_new_data(project, df_project, model_path, training_pool,
       #Train
       try:
         print("Current training date: ", datetime.fromtimestamp(last_timestamp))
-        th, trained = train(project, model_path, training_pool, 
+        th, trained = train(path, project, model_path, training_pool, 
                             th=th,
                             adjust_th=adjust_th and (not adjust_th_on_test),
                             eval_metric=eval_metric,
@@ -389,13 +388,13 @@ def train_on_line_with_new_data(project, df_project, model_path, training_pool,
     if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
       if adjust_th_on_test:
         print("Calculating new th...")
-        _, predictions = test(project, df_test[-window_size:], model_path,
+        _, predictions = test(path, project, df_test[-window_size:], model_path,
                               th=th, pretrained_model=pretrained_model,
                               calculate_metrics=calculate_metrics,
                               eval_metric=eval_metric)
         th = calculate_th_from_test(predictions, target_th=target_th)
 
-      results, predictions = test(project, df_test, model_path, th=th,
+      results, predictions = test(path, project, df_test, model_path, th=th,
                                   pretrained_model=pretrained_model,
                                   calculate_metrics=calculate_metrics,
                                   eval_metric=eval_metric)
@@ -416,7 +415,7 @@ def train_on_line_with_new_data(project, df_project, model_path, training_pool,
 
   return list_of_results, list_of_predictions
 
-def train_on_line_with_new_data_with_early_stop(project, df_project, model_path,
+def train_on_line_with_new_data_with_early_stop(path, project, df_project, model_path,
                                                 early_stop_metric='f1',
                                                 do_real_lat_ver=False,
                                                 adjust_th=False,
@@ -435,7 +434,7 @@ def train_on_line_with_new_data_with_early_stop(project, df_project, model_path,
   map_commit_to_row = dict()
   print('len(batches) in train_on_line_with_new_data_with_early_stop(): ',
         len(batches))
-  return train_on_line_with_new_data(project, df_project, model_path,
+  return train_on_line_with_new_data(path, project, df_project, model_path,
                                      training_pool, training_queue,
                                      map_commit_to_row,
                                      buggy_pool, eval_metric=early_stop_metric,
@@ -449,7 +448,7 @@ def train_on_line_with_new_data_with_early_stop(project, df_project, model_path,
                                      pretrained_model=pretrained_model,
                                      train_from_scratch=train_from_scratch)
 
-def train_project(project, early_stop_metric="gmean", do_real_lat_ver=False,
+def train_project(path, project, early_stop_metric="gmean", do_real_lat_ver=False,
                   adjust_th=False, do_oversample=True, model_path=None,
                   skewed_oversample=False, adjust_th_on_test=False, seed=33,
                   window_size=100, target_th=0.5, l0=10, l1=12 , m=1.5, start=0,
@@ -472,7 +471,7 @@ def train_project(project, early_stop_metric="gmean", do_real_lat_ver=False,
   if not model_path:
     model_path = f"/content/drive/MyDrive/UFPE/Tese/PEFT4CC/results/jitfine_lora/{pretrained_model}/concat/online/baseline/{project}_best_{early_stop_metric}/checkpoints"
 
-  results, list_of_predictions = train_on_line_with_new_data_with_early_stop(
+  results, list_of_predictions = train_on_line_with_new_data_with_early_stop(path, 
       project, df_project, model_path, early_stop_metric=early_stop_metric,
       do_real_lat_ver=do_real_lat_ver, adjust_th=adjust_th,
       do_oversample=do_oversample, skewed_oversample=skewed_oversample,
@@ -532,13 +531,13 @@ def train_project_with_lat_ver(project, early_stop_metric="gmean", adjust_th=Fal
     df = pd.DataFrame(columns=columns)
 
     if project in projects_with_real_lat_ver:
-      _, predictions, model_path = train_project(project, early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
+      _, predictions, model_path = train_project(path, project, early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
                                                  adjust_th=adjust_th, do_oversample=do_oversample, skewed_oversample=skewed_oversample,
                                                  adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, 
                                                  target_th=target_th, l0=l0, l1=l1, m=m, start=start, end=end, 
                                                  pretrained_model=pretrained_model, train_from_scratch=train_from_scratch)
     else:
-      _, predictions, model_path = train_project(project, early_stop_metric=early_stop_metric, do_real_lat_ver=False, 
+      _, predictions, model_path = train_project(path, project, early_stop_metric=early_stop_metric, do_real_lat_ver=False, 
                                                  adjust_th=adjust_th, do_oversample=do_oversample, skewed_oversample=skewed_oversample,
                                                  adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, 
                                                  target_th=target_th, l0=l0, l1=l1, m=m, start=start, end=end, 

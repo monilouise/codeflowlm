@@ -1,11 +1,9 @@
 from codeflowlm.data import get_changes_from_features
-from codeflowlm.data import path
 from codeflowlm.train import execute_command
-import pandas as pd
 import pickle
 import os
 
-def test(project, features_test, model_path, th, pretrained_model, 
+def test(path, project, features_test, model_path, th, pretrained_model, 
          calculate_metrics=True, peft_alg="lora", eval_metric='f1'):
   changes_test = get_changes_from_features(features_test, do_test=True)
   with open(f"{path}/changes_test_online_{project}.pkl", "wb") as f:

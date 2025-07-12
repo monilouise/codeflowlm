@@ -52,4 +52,3 @@ def get_changes_from_features(df_features, do_test=True):
   return changes
 
 
-path = '/content/drive/MyDrive/UFPE/Tese/Datasets/jitfine'
