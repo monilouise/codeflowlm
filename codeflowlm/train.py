@@ -6,7 +6,7 @@ import time
 import traceback
 import shutil
 from codeflowlm.command import execute_command
-from codeflowlm.data import ord_cross_changes_full, df_features_full
+from codeflowlm.data import ord_cross_changes_full, get_df_features_full
 from codeflowlm.latency_verification import add_first_fix_date, do_latency_verification, do_real_latency_verification, process_buggy_commit
 from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
@@ -448,12 +448,10 @@ def train_on_line_with_new_data_with_early_stop(path, project, df_project, model
                                      pretrained_model=pretrained_model,
                                      train_from_scratch=train_from_scratch)
 
-def train_project(path, project, early_stop_metric="gmean", do_real_lat_ver=False,
-                  adjust_th=False, do_oversample=True, model_path=None,
-                  skewed_oversample=False, adjust_th_on_test=False, seed=33,
-                  window_size=100, target_th=0.5, l0=10, l1=12 , m=1.5, start=0,
-                  end=None, pretrained_model="codet5p-770m",
-                  train_from_scratch=True):
+def train_project(path, full_features_train_file, full_features_valid_file, full_features_test_file, project, early_stop_metric="gmean", do_real_lat_ver=False,
+                  adjust_th=False, do_oversample=True, model_path=None, skewed_oversample=False, adjust_th_on_test=False, seed=33, window_size=100, 
+                  target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True):
+  df_features_full = get_df_features_full(full_features_train_file, full_features_valid_file, full_features_test_file)
   df_project = df_features_full[df_features_full['project'] == project]
   rows1 = df_project.shape[0]
   print('df_project.shape before: ', df_project.shape)
