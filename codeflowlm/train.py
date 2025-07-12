@@ -219,12 +219,9 @@ def add_to_cumulative_training_pool(row, global_training_pool):
 
   global_training_pool.append(row)
 
-def train(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
-          project, model_path, training_pool, 
-          use_only_new_data=True, th=0.5, adjust_th=False,
-          eval_metric="f1", do_oversample=False, do_undersample=False,
-          pretrained_model='codet5p-770m', trained=0,
-          skewed_oversample=False, adjust_th_on_test=False, peft_alg="lora",
+def train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, model_path, training_pool, 
+          use_only_new_data=True, th=0.5, adjust_th=False, eval_metric="f1", do_oversample=False, do_undersample=False,
+          pretrained_model='codet5p-770m', trained=0, skewed_oversample=False, adjust_th_on_test=False, peft_alg="lora",
           seed=33, window_size=100, target_th=0.5, l0=10, l1=12, m=1.5):
 
   if os.path.exists(os.path.join(model_path, "training_status.txt")):
@@ -248,7 +245,7 @@ def train(path, full_changes_train_file, full_changed_valid_file, full_changes_t
     action = "do_resume_training"
 
   command = f"""
-  python PEFT4CC/just-in-time/run_{peft_alg}.py \
+  python {batch_classifier_dir}PEFT4CC/just-in-time/run_{peft_alg}.py \
    --train_data_file {changes_train_file} {features_train_file} \
    --eval_data_file {changes_valid_file} {features_valid_file} \
    --output_dir {model_path} \
@@ -292,8 +289,6 @@ def train(path, full_changes_train_file, full_changed_valid_file, full_changes_t
   print(f"Training with th={th}...")
   execute_command(command)
 
-  model_updated = False
-
   if use_only_new_data:
     while not os.path.exists(os.path.join(model_path, "training_status.txt")):
       print("Waiting for traning_status.txt")
@@ -307,7 +302,6 @@ def train(path, full_changes_train_file, full_changed_valid_file, full_changes_t
         #Clear training pool
         training_pool.clear()
         trained += len(set([sample['commit_hash'] for sample in training_pool]))
-        model_updated = True
       else:
         print(f"File '{file_to_monitor}' has not changed.  Keeping training data.")
 
@@ -361,18 +355,12 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
       #Train
       try:
         print("Current training date: ", datetime.fromtimestamp(last_timestamp))
-        th, trained = train(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
-                            project, model_path, training_pool, 
-                            th=th,
-                            adjust_th=adjust_th and (not adjust_th_on_test),
-                            eval_metric=eval_metric,
-                            do_oversample=do_oversample and (not skewed_oversample),
-                            do_undersample=do_undersample,
-                            pretrained_model=pretrained_model,
-                            trained=trained,
-                            skewed_oversample=skewed_oversample,
-                            adjust_th_on_test=adjust_th_on_test, seed=seed,
-                            window_size=window_size, target_th=target_th, l0=l0,
+        th, trained = train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+                            full_changes_test_file, project, model_path, training_pool, th=th, 
+                            adjust_th=adjust_th and (not adjust_th_on_test), eval_metric=eval_metric, 
+                            do_oversample=do_oversample and (not skewed_oversample), do_undersample=do_undersample,
+                            pretrained_model=pretrained_model, trained=trained, skewed_oversample=skewed_oversample,
+                            adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, target_th=target_th, l0=l0,
                             l1=l1, m=m)
       except Exception as e:
         print("Not enough labeled training/validation data.  Delaying training...")
