@@ -9,7 +9,7 @@ import shutil
 from codeflowlm.command import execute_command
 from codeflowlm.data import ord_cross_changes_full, path, df_features_full
 from codeflowlm.latency_verification import add_first_fix_date, do_latency_verification, do_real_latency_verification, process_buggy_commit
-from codeflowlm.metrics import calculate_prequential_mean_and_std
+from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
 from codeflowlm.test import test
 from codeflowlm.threshold import calculate_th_from_test
