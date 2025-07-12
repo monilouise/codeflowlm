@@ -240,9 +240,6 @@ def train(project, model_path, training_pool,
           skewed_oversample=False, adjust_th_on_test=False, peft_alg="lora",
           seed=33, window_size=100, target_th=0.5, l0=10, l1=12, m=1.5):
 
-  #if TRAIN_FROM_SCRATCH and os.path.exists(model_path):
-    #shutil.rmtree(model_path)
-
   if os.path.exists(os.path.join(model_path, "training_status.txt")):
     os.remove(os.path.join(model_path, "training_status.txt"))
 
