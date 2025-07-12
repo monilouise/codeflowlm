@@ -567,7 +567,7 @@ def train_project_with_lat_ver(path, model_root, commit_guru_path, full_features
                        mean_recall, mean_r0, mean_r1, mean_r_diff, std_g_mean,
                        std_f1, std_precision, std_recall, std_r0, std_r1,
                        std_r_diff]
-    base_path = f'/content/drive/MyDrive/UFPE/Tese/PEFT4CC/results/jitfine_lora/{pretrained_model}/concat/online/baseline'
+    base_path = model_root + pretrained_model + '/concat/online/baseline'
     path = base_path + f'/{results_folder}'
     df.to_csv(f'{path}/{project}_results_wp.csv', index=False)
 
