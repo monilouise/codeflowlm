@@ -455,7 +455,7 @@ def train_on_line_with_new_data_with_early_stop(path, full_changes_train_file, f
                                      pretrained_model=pretrained_model,
                                      train_from_scratch=train_from_scratch)
 
-def train_project(path, full_features_train_file, full_features_valid_file, full_features_test_file, full_changes_train_file, 
+def train_project(path, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, full_changes_train_file, 
                   full_changed_valid_file, full_changes_test_file, project, early_stop_metric="gmean", do_real_lat_ver=False,
                   adjust_th=False, do_oversample=True, model_path=None, skewed_oversample=False, adjust_th_on_test=False, seed=33, window_size=100, 
                   target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True):
@@ -463,7 +463,7 @@ def train_project(path, full_features_train_file, full_features_valid_file, full
   df_project = df_features_full[df_features_full['project'] == project]
   rows1 = df_project.shape[0]
   print('df_project.shape before: ', df_project.shape)
-  df_project = add_first_fix_date(df_project, project)
+  df_project = add_first_fix_date(commit_guru_path, df_project, project)
   rows2 = df_project.shape[0]
   print('df_project.shape after: ', df_project.shape)
   assert rows1 == rows2
@@ -503,7 +503,7 @@ def train_project(path, full_features_train_file, full_features_valid_file, full
 
   return results, predictions, model_path
 
-def train_project_with_lat_ver(path, full_features_train_file, full_features_valid_file, full_features_test_file, 
+def train_project_with_lat_ver(path, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
                                full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, 
                                early_stop_metric="gmean", adjust_th=False, do_oversample=True, skewed_oversample=False, 
                                adjust_th_on_test=False, seed=33, decay_factor=0.99, window_size=100, target_th=0.5, l0=10, l1=12 , 
@@ -540,7 +540,7 @@ def train_project_with_lat_ver(path, full_features_train_file, full_features_val
     df = pd.DataFrame(columns=columns)
 
     if project in projects_with_real_lat_ver:
-      _, predictions, model_path = train_project(path, full_features_train_file, full_features_valid_file, full_features_test_file, 
+      _, predictions, model_path = train_project(path, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
                                                  full_changes_train_file, full_changed_valid_file, full_changes_test_file,
                                                  project, early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
                                                  adjust_th=adjust_th, do_oversample=do_oversample, skewed_oversample=skewed_oversample,
@@ -548,7 +548,7 @@ def train_project_with_lat_ver(path, full_features_train_file, full_features_val
                                                  target_th=target_th, l0=l0, l1=l1, m=m, start=start, end=end, 
                                                  pretrained_model=pretrained_model, train_from_scratch=train_from_scratch)
     else:
-      _, predictions, model_path = train_project(path, full_features_train_file, full_features_valid_file, full_features_test_file, 
+      _, predictions, model_path = train_project(path, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
                                                  full_changes_train_file, full_changed_valid_file, full_changes_test_file,
                                                  project, early_stop_metric=early_stop_metric, do_real_lat_ver=False, 
                                                  adjust_th=adjust_th, do_oversample=do_oversample, skewed_oversample=skewed_oversample,

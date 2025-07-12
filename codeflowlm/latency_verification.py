@@ -8,8 +8,8 @@ import os
 from codeflowlm.date_util import get_difference
 
 
-def add_first_fix_date(df, project):
-    csv = f'/content/drive/MyDrive/UFPE/Tese/Datasets/JIT-Defects4J/commit_guru/{project}.csv'
+def add_first_fix_date(commit_guru_path, df, project):
+    csv = commit_guru_path + project + '.csv'
 
     if os.path.exists(csv) == False:
       return df
