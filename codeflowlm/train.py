@@ -26,25 +26,8 @@ projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'commons-validator','commons-vfs','gora',
                                 'parquet-mr']
 
-waiting_time = 90
 batches = []
 USE_GLOBAL_DATA_FOR_TH = True
-
-
-def add_to_training_pool(row, training_pool):
-  #Verifica se o id já existe no training pool.  Se já existir, checar o label.
-  #Se for 0 e o novo for 1, setar o label no registro atual e ignorar o novo
-  #registro.  Nas demais combinações de labels atual e novo, ignorar o novo
-  #registro e deixar o atual. Se não existir, adicionar o novo.
-  for training_example in training_pool:
-    if training_example['commit_hash'] == row['commit_hash']:
-      if training_example['is_buggy_commit'] == 0 and row['is_buggy_commit'] == 1:
-        training_example['is_buggy_commit'] = 1.0
-        assert training_example['is_buggy_commit'] == row['is_buggy_commit']
-      return
-
-  training_pool.append(row)
-
 
 
 #From a given df_train (a segment from the stream), a training pool, a training

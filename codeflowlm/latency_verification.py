@@ -5,8 +5,7 @@ import pandas as pd
 import math
 import os
 
-from codeflowlm.train import add_to_training_pool, waiting_time
-from date_util import get_difference
+from codeflowlm.date_util import get_difference
 
 
 def add_first_fix_date(df, project):
@@ -44,6 +43,24 @@ def add_first_fix_date(df, project):
     result = result.fillna(0)
     result['first_fix_date'] = result['first_fix_date'].astype(int)
     return result
+
+
+def add_to_training_pool(row, training_pool):
+  #Verifica se o id já existe no training pool.  Se já existir, checar o label.
+  #Se for 0 e o novo for 1, setar o label no registro atual e ignorar o novo
+  #registro.  Nas demais combinações de labels atual e novo, ignorar o novo
+  #registro e deixar o atual. Se não existir, adicionar o novo.
+  for training_example in training_pool:
+    if training_example['commit_hash'] == row['commit_hash']:
+      if training_example['is_buggy_commit'] == 0 and row['is_buggy_commit'] == 1:
+        training_example['is_buggy_commit'] = 1.0
+        assert training_example['is_buggy_commit'] == row['is_buggy_commit']
+      return
+
+  training_pool.append(row)
+
+
+waiting_time = 90
 
 
 def do_real_latency_verification(row, training_pool, training_queue,
