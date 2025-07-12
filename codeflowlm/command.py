@@ -13,8 +13,9 @@ def execute_command(command):
     print(command)
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-    # Mostra a saída em tempo real
-    for line in process.stdout:
-        print(line, end='')  # evita pular linhas duplas
+    # Lê e imprime cada linha assim que disponível
+    for line in iter(process.stdout.readline, ''):
+        print(line, end='', flush=True)  # flush força o print imediato no Colab
 
-    process.wait()  # Aguarda o término
+    process.stdout.close()
+    process.wait()
