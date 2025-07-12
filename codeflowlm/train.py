@@ -313,18 +313,12 @@ def train(path, full_changes_train_file, full_changed_valid_file, full_changes_t
 
   return th, trained
 
-def train_on_line_with_new_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
-                                project, df_project, model_path, training_pool,
-                                training_queue, 
-                                map_commit_to_row, buggy_pool=[],
-                                training_examples=50, th=0.5, adjust_th=False,
-                                eval_metric="f1", do_oversample=False,
-                                do_undersample=False,
-                                pretrained_model='codet5p-770m',
-                                do_real_lat_ver=False, 
-                                skewed_oversample=False,
-                                adjust_th_on_test=False, seed=33,
-                                window_size=100, target_th=0.5, l0=10, l1=12,
+def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+                                full_changes_test_file, project, df_project, model_path, training_pool, training_queue, 
+                                map_commit_to_row, buggy_pool=[], training_examples=50, th=0.5, adjust_th=False,
+                                eval_metric="f1", do_oversample=False, do_undersample=False, 
+                                pretrained_model='codet5p-770m', do_real_lat_ver=False, skewed_oversample=False,
+                                adjust_th_on_test=False, seed=33, window_size=100, target_th=0.5, l0=10, l1=12,
                                 m=1.5, train_from_scratch=True):
   list_of_results = []
   list_of_predictions = []
@@ -391,17 +385,15 @@ def train_on_line_with_new_data(path, full_changes_train_file, full_changed_vali
     if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
       if adjust_th_on_test:
         print("Calculating new th...")
-        _, predictions = test(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
-                              project, df_test[-window_size:], model_path,
-                              th=th, pretrained_model=pretrained_model,
-                              calculate_metrics=calculate_metrics,
+        _, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+                              full_changes_test_file, project, df_test[-window_size:], model_path, th=th, 
+                              pretrained_model=pretrained_model, calculate_metrics=calculate_metrics, 
                               eval_metric=eval_metric)
         th = calculate_th_from_test(predictions, target_th=target_th)
 
-      results, predictions = test(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
-                                  project, df_test, model_path, th=th,
-                                  pretrained_model=pretrained_model,
-                                  calculate_metrics=calculate_metrics,
+      results, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+                                  full_changes_test_file, project, df_test, model_path, th=th, 
+                                  pretrained_model=pretrained_model, calculate_metrics=calculate_metrics,
                                   eval_metric=eval_metric)
       list_of_results.append(results)
     else:
@@ -420,19 +412,12 @@ def train_on_line_with_new_data(path, full_changes_train_file, full_changed_vali
 
   return list_of_results, list_of_predictions
 
-def train_on_line_with_new_data_with_early_stop(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
-                                                project, df_project, model_path,
-                                                early_stop_metric='f1',
-                                                do_real_lat_ver=False,
-                                                adjust_th=False,
-                                                do_oversample=True,
-                                                skewed_oversample=False,
-                                                adjust_th_on_test=False,
-                                                seed=33, window_size=100,
-                                                target_th=0.5, l0=10, l1=12,
-                                                m=1.5,
-                                                pretrained_model="codet5p-770m",
-                                                train_from_scratch=True):
+def train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, full_changes_train_file, 
+                                                full_changed_valid_file, full_changes_test_file, project, df_project, 
+                                                model_path, early_stop_metric='f1', do_real_lat_ver=False, 
+                                                adjust_th=False, do_oversample=True, skewed_oversample=False,
+                                                adjust_th_on_test=False, seed=33, window_size=100, target_th=0.5, l0=10, l1=12,
+                                                m=1.5, pretrained_model="codet5p-770m", train_from_scratch=True):
   batches = []
   training_pool = []
   training_queue = []
@@ -440,25 +425,20 @@ def train_on_line_with_new_data_with_early_stop(path, full_changes_train_file, f
   map_commit_to_row = dict()
   print('len(batches) in train_on_line_with_new_data_with_early_stop(): ',
         len(batches))
-  return train_on_line_with_new_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file,
-                                     project, df_project, model_path,
-                                     training_pool, training_queue,
-                                     map_commit_to_row,
-                                     buggy_pool, eval_metric=early_stop_metric,
-                                     do_oversample=do_oversample,
-                                     do_real_lat_ver=do_real_lat_ver,
-                                     adjust_th=adjust_th, 
-                                     skewed_oversample=skewed_oversample,
-                                     adjust_th_on_test=adjust_th_on_test,
-                                     seed=seed, window_size=window_size,
-                                     target_th=target_th, l0=l0, l1=l1, m=m,
-                                     pretrained_model=pretrained_model,
+  return train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+                                     full_changes_test_file, project, df_project, model_path, training_pool, 
+                                     training_queue, map_commit_to_row, buggy_pool, eval_metric=early_stop_metric,
+                                     do_oversample=do_oversample, do_real_lat_ver=do_real_lat_ver, adjust_th=adjust_th, 
+                                     skewed_oversample=skewed_oversample, adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size,
+                                     target_th=target_th, l0=l0, l1=l1, m=m, pretrained_model=pretrained_model,
                                      train_from_scratch=train_from_scratch)
 
-def train_project(path, model_root, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, full_changes_train_file, 
-                  full_changed_valid_file, full_changes_test_file, project, early_stop_metric="gmean", do_real_lat_ver=False,
-                  adjust_th=False, do_oversample=True, model_path=None, skewed_oversample=False, adjust_th_on_test=False, seed=33, window_size=100, 
-                  target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True):
+def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full_features_train_file, 
+                  full_features_valid_file, full_features_test_file, full_changes_train_file, full_changed_valid_file, 
+                  full_changes_test_file, project, early_stop_metric="gmean", do_real_lat_ver=False, adjust_th=False, 
+                  do_oversample=True, model_path=None, skewed_oversample=False, adjust_th_on_test=False, seed=33, 
+                  window_size=100, target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, 
+                  pretrained_model="codet5p-770m", train_from_scratch=True):
   df_features_full = get_df_features_full(full_features_train_file, full_features_valid_file, full_features_test_file)
   df_project = df_features_full[df_features_full['project'] == project]
   rows1 = df_project.shape[0]
@@ -477,14 +457,21 @@ def train_project(path, model_root, commit_guru_path, full_features_train_file, 
   if not model_path:
     model_path = model_root + pretrained_model + f"/concat/online/baseline/{project}_best_{early_stop_metric}/checkpoints"
 
-  results, list_of_predictions = train_on_line_with_new_data_with_early_stop(path, 
-      full_changes_train_file, full_changed_valid_file, full_changes_test_file,
-      project, df_project, model_path, early_stop_metric=early_stop_metric,
-      do_real_lat_ver=do_real_lat_ver, adjust_th=adjust_th,
-      do_oversample=do_oversample, skewed_oversample=skewed_oversample,
-      adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size,
-      target_th=target_th, l0=l0, l1=l1, m=m, pretrained_model=pretrained_model,
-      train_from_scratch=train_from_scratch)
+  results, list_of_predictions = train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, 
+                                                                             full_changes_train_file, 
+                                                                             full_changed_valid_file, 
+                                                                             full_changes_test_file, project, 
+                                                                             df_project, model_path, 
+                                                                             early_stop_metric=early_stop_metric, 
+                                                                             do_real_lat_ver=do_real_lat_ver, 
+                                                                             adjust_th=adjust_th, 
+                                                                             do_oversample=do_oversample, 
+                                                                             skewed_oversample=skewed_oversample, 
+                                                                             adjust_th_on_test=adjust_th_on_test, 
+                                                                             seed=seed, window_size=window_size, 
+                                                                             target_th=target_th, l0=l0, l1=l1, m=m, 
+                                                                             pretrained_model=pretrained_model, 
+                                                                             train_from_scratch=train_from_scratch)
 
   true_labels = []
   pred_labels = []
@@ -503,7 +490,7 @@ def train_project(path, model_root, commit_guru_path, full_features_train_file, 
 
   return results, predictions, model_path
 
-def train_project_with_lat_ver(path, model_root, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
+def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
                                full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, 
                                early_stop_metric="gmean", adjust_th=False, do_oversample=True, skewed_oversample=False, 
                                adjust_th_on_test=False, seed=33, decay_factor=0.99, window_size=100, target_th=0.5, l0=10, l1=12 , 
@@ -540,21 +527,29 @@ def train_project_with_lat_ver(path, model_root, commit_guru_path, full_features
     df = pd.DataFrame(columns=columns)
 
     if project in projects_with_real_lat_ver:
-      _, predictions, model_path = train_project(path, model_root, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
-                                                 full_changes_train_file, full_changed_valid_file, full_changes_test_file,
-                                                 project, early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
-                                                 adjust_th=adjust_th, do_oversample=do_oversample, skewed_oversample=skewed_oversample,
-                                                 adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, 
-                                                 target_th=target_th, l0=l0, l1=l1, m=m, start=start, end=end, 
-                                                 pretrained_model=pretrained_model, train_from_scratch=train_from_scratch)
+      _, predictions, model_path = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
+                                                 full_features_train_file, full_features_valid_file, 
+                                                 full_features_test_file, full_changes_train_file, 
+                                                 full_changed_valid_file, full_changes_test_file, project, 
+                                                 early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
+                                                 adjust_th=adjust_th, do_oversample=do_oversample, 
+                                                 skewed_oversample=skewed_oversample, 
+                                                 adjust_th_on_test=adjust_th_on_test, seed=seed, 
+                                                 window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, 
+                                                 start=start, end=end, pretrained_model=pretrained_model, 
+                                                 train_from_scratch=train_from_scratch)
     else:
-      _, predictions, model_path = train_project(path, model_root, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
-                                                 full_changes_train_file, full_changed_valid_file, full_changes_test_file,
-                                                 project, early_stop_metric=early_stop_metric, do_real_lat_ver=False, 
-                                                 adjust_th=adjust_th, do_oversample=do_oversample, skewed_oversample=skewed_oversample,
-                                                 adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, 
-                                                 target_th=target_th, l0=l0, l1=l1, m=m, start=start, end=end, 
-                                                 pretrained_model=pretrained_model, train_from_scratch=train_from_scratch)
+      _, predictions, model_path = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
+                                                 full_features_train_file, full_features_valid_file, 
+                                                 full_features_test_file, full_changes_train_file, 
+                                                 full_changed_valid_file, full_changes_test_file, project, 
+                                                 early_stop_metric=early_stop_metric, do_real_lat_ver=False, 
+                                                 adjust_th=adjust_th, do_oversample=do_oversample, 
+                                                 skewed_oversample=skewed_oversample, 
+                                                 adjust_th_on_test=adjust_th_on_test, seed=seed, 
+                                                 window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, 
+                                                 start=start, end=end, pretrained_model=pretrained_model, 
+                                                 train_from_scratch=train_from_scratch)
 
     with open(f'{model_path}/{project}_predictions_wp.pkl', 'wb') as f:
       pickle.dump(predictions, f)
