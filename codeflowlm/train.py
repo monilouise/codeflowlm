@@ -496,7 +496,7 @@ def train_project(path, project, early_stop_metric="gmean", do_real_lat_ver=Fals
 
   return results, predictions, model_path
 
-def train_project_with_lat_ver(project, early_stop_metric="gmean", adjust_th=False, do_oversample=True, skewed_oversample=False, 
+def train_project_with_lat_ver(path, project, early_stop_metric="gmean", adjust_th=False, do_oversample=True, skewed_oversample=False, 
                                adjust_th_on_test=False, seed=33, decay_factor=0.99, window_size=100, target_th=0.5, l0=10, l1=12 , 
                                m=1.5, results_folder='', start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True):
   #projects = [
