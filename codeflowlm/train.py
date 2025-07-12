@@ -6,7 +6,7 @@ import time
 import traceback
 import shutil
 from codeflowlm.command import execute_command
-from codeflowlm.data import ord_cross_changes_full, get_df_features_full
+from codeflowlm.data import get_ord_cross_changes_full, get_df_features_full
 from codeflowlm.latency_verification import add_first_fix_date, do_latency_verification, do_real_latency_verification, process_buggy_commit
 from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
@@ -62,7 +62,7 @@ def is_valid_training_data(training_pool):
   #07/07/2025: pelo menos um exemplo positivo e um exemplo negativo
   return df.shape[0] > 0 and df['is_buggy_commit'].sum() >= 1 and df['is_buggy_commit'].sum() < df.shape[0]
 
-def prepare_training_data(path, project, df, do_eval_with_all_negative=False):
+def prepare_training_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, df, do_eval_with_all_negative=False):
   if 'first_fix_date' in df.columns and 'fixes' in df.columns:
     df = df.drop(columns=['first_fix_date', 'fixes'])
 
@@ -71,6 +71,8 @@ def prepare_training_data(path, project, df, do_eval_with_all_negative=False):
   labels = []
   commit_messages = []
   codes = []
+  
+  ord_cross_changes_full = get_ord_cross_changes_full(full_changes_train_file, full_changed_valid_file, full_changes_test_file)
 
   for _, row in df.iterrows():
     commit_id = row['commit_hash']
@@ -219,7 +221,8 @@ def add_to_cumulative_training_pool(row, global_training_pool):
 
   global_training_pool.append(row)
 
-def train(path, project, model_path, training_pool, 
+def train(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
+          project, model_path, training_pool, 
           use_only_new_data=True, th=0.5, adjust_th=False,
           eval_metric="f1", do_oversample=False, do_undersample=False,
           pretrained_model='codet5p-770m', trained=0,
@@ -233,7 +236,7 @@ def train(path, project, model_path, training_pool,
 
   print("Training pool size = ", df.shape[0])
 
-  changes_train_file, features_train_file, changes_valid_file, features_valid_file = prepare_training_data(path, project, df)
+  changes_train_file, features_train_file, changes_valid_file, features_valid_file = prepare_training_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, df)
 
   batches.append(df)
 
@@ -312,7 +315,8 @@ def train(path, project, model_path, training_pool,
 
   return th, trained
 
-def train_on_line_with_new_data(path, project, df_project, model_path, training_pool,
+def train_on_line_with_new_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
+                                project, df_project, model_path, training_pool,
                                 training_queue, 
                                 map_commit_to_row, buggy_pool=[],
                                 training_examples=50, th=0.5, adjust_th=False,
@@ -365,7 +369,8 @@ def train_on_line_with_new_data(path, project, df_project, model_path, training_
       #Train
       try:
         print("Current training date: ", datetime.fromtimestamp(last_timestamp))
-        th, trained = train(path, project, model_path, training_pool, 
+        th, trained = train(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
+                            project, model_path, training_pool, 
                             th=th,
                             adjust_th=adjust_th and (not adjust_th_on_test),
                             eval_metric=eval_metric,
@@ -415,7 +420,8 @@ def train_on_line_with_new_data(path, project, df_project, model_path, training_
 
   return list_of_results, list_of_predictions
 
-def train_on_line_with_new_data_with_early_stop(path, project, df_project, model_path,
+def train_on_line_with_new_data_with_early_stop(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
+                                                project, df_project, model_path,
                                                 early_stop_metric='f1',
                                                 do_real_lat_ver=False,
                                                 adjust_th=False,
@@ -434,7 +440,8 @@ def train_on_line_with_new_data_with_early_stop(path, project, df_project, model
   map_commit_to_row = dict()
   print('len(batches) in train_on_line_with_new_data_with_early_stop(): ',
         len(batches))
-  return train_on_line_with_new_data(path, project, df_project, model_path,
+  return train_on_line_with_new_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file,
+                                     project, df_project, model_path,
                                      training_pool, training_queue,
                                      map_commit_to_row,
                                      buggy_pool, eval_metric=early_stop_metric,
@@ -448,7 +455,8 @@ def train_on_line_with_new_data_with_early_stop(path, project, df_project, model
                                      pretrained_model=pretrained_model,
                                      train_from_scratch=train_from_scratch)
 
-def train_project(path, full_features_train_file, full_features_valid_file, full_features_test_file, project, early_stop_metric="gmean", do_real_lat_ver=False,
+def train_project(path, full_features_train_file, full_features_valid_file, full_features_test_file, full_changes_train_file, 
+                  full_changed_valid_file, full_changes_test_file, project, early_stop_metric="gmean", do_real_lat_ver=False,
                   adjust_th=False, do_oversample=True, model_path=None, skewed_oversample=False, adjust_th_on_test=False, seed=33, window_size=100, 
                   target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True):
   df_features_full = get_df_features_full(full_features_train_file, full_features_valid_file, full_features_test_file)
@@ -470,6 +478,7 @@ def train_project(path, full_features_train_file, full_features_valid_file, full
     model_path = f"/content/drive/MyDrive/UFPE/Tese/PEFT4CC/results/jitfine_lora/{pretrained_model}/concat/online/baseline/{project}_best_{early_stop_metric}/checkpoints"
 
   results, list_of_predictions = train_on_line_with_new_data_with_early_stop(path, 
+      full_changes_train_file, full_changed_valid_file, full_changes_test_file,
       project, df_project, model_path, early_stop_metric=early_stop_metric,
       do_real_lat_ver=do_real_lat_ver, adjust_th=adjust_th,
       do_oversample=do_oversample, skewed_oversample=skewed_oversample,
@@ -494,7 +503,8 @@ def train_project(path, full_features_train_file, full_features_valid_file, full
 
   return results, predictions, model_path
 
-def train_project_with_lat_ver(path, full_features_train_file, full_features_valid_file, full_features_test_file, project, 
+def train_project_with_lat_ver(path, full_features_train_file, full_features_valid_file, full_features_test_file, 
+                               full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, 
                                early_stop_metric="gmean", adjust_th=False, do_oversample=True, skewed_oversample=False, 
                                adjust_th_on_test=False, seed=33, decay_factor=0.99, window_size=100, target_th=0.5, l0=10, l1=12 , 
                                m=1.5, results_folder='', start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True):
@@ -531,6 +541,7 @@ def train_project_with_lat_ver(path, full_features_train_file, full_features_val
 
     if project in projects_with_real_lat_ver:
       _, predictions, model_path = train_project(path, full_features_train_file, full_features_valid_file, full_features_test_file, 
+                                                 full_changes_train_file, full_changed_valid_file, full_changes_test_file,
                                                  project, early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
                                                  adjust_th=adjust_th, do_oversample=do_oversample, skewed_oversample=skewed_oversample,
                                                  adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, 
@@ -538,6 +549,7 @@ def train_project_with_lat_ver(path, full_features_train_file, full_features_val
                                                  pretrained_model=pretrained_model, train_from_scratch=train_from_scratch)
     else:
       _, predictions, model_path = train_project(path, full_features_train_file, full_features_valid_file, full_features_test_file, 
+                                                 full_changes_train_file, full_changed_valid_file, full_changes_test_file,
                                                  project, early_stop_metric=early_stop_metric, do_real_lat_ver=False, 
                                                  adjust_th=adjust_th, do_oversample=do_oversample, skewed_oversample=skewed_oversample,
                                                  adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, 
