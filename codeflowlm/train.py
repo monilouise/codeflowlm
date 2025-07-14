@@ -307,6 +307,14 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
 
   return th, trained
 
+def check_df_project_sorted(df_project):
+    if 'author_date_unix_timestamp' not in df_project.columns:
+      raise ValueError("Column 'author_date_unix_timestamp' not found.")
+    timestamps = pd.to_numeric(df_project['author_date_unix_timestamp'], errors='coerce')
+    if not timestamps.is_monotonic_increasing:
+      raise ValueError("df_project is NOT increasingly sorted by 'author_date_unix_timestamp'.")
+    print("df_project IS increasingly sorted by 'author_date_unix_timestamp'")
+
 def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
                                 full_changes_test_file, project, df_project, model_path, training_pool, training_queue, 
                                 map_commit_to_row, buggy_pool=[], training_examples=50, th=0.5, adjust_th=False,
@@ -329,6 +337,9 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   start = 0
   step = training_examples
   end = df_project.shape[0]
+  
+  
+  check_df_project_sorted(df_project)
 
   for current in range(start, end, step):
     print('current = ', current)

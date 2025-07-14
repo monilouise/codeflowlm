@@ -78,8 +78,6 @@ def rolling_roc_auc(predictions):
   metric = metrics.RollingROCAUC()
   true_label = predictions['true_labels']
   pred_prob = predictions['pred_probs']
-  print('true_label = ', true_label)
-  print('pred_prob = ', pred_prob)
 
   for yt, yp in zip(true_label, pred_prob):
     if isinstance(yp, int):
