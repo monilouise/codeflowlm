@@ -222,7 +222,7 @@ def add_to_cumulative_training_pool(row, global_training_pool):
 def train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, model_path, training_pool, 
           use_only_new_data=True, th=0.5, adjust_th=False, eval_metric="f1", do_oversample=False, do_undersample=False,
           pretrained_model='codet5p-770m', trained=0, skewed_oversample=False, adjust_th_on_test=False, peft_alg="lora",
-          seed=33, window_size=100, target_th=0.5, l0=10, l1=12, m=1.5):
+          seed=33, window_size=100, target_th=0.5, l0=10, l1=12, m=1.5, batch_size=16):
 
   if os.path.exists(os.path.join(model_path, "training_status.txt")):
     os.remove(os.path.join(model_path, "training_status.txt"))
@@ -252,7 +252,7 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
    --pretrained_model {model_name} \
    --learning_rate 1e-4 \
    --epochs 10 \
-   --batch_size 16 \
+   --batch_size {batch_size} \
    --{action} \
    --threshold {th} \
    --seed {seed} \
@@ -372,7 +372,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                             do_oversample=do_oversample and (not skewed_oversample), do_undersample=do_undersample,
                             pretrained_model=pretrained_model, trained=trained, skewed_oversample=skewed_oversample,
                             adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, target_th=target_th, l0=l0,
-                            l1=l1, m=m)
+                            l1=l1, m=m, batch_size=batch_size)
       except Exception as e:
         print("Not enough labeled training/validation data.  Delaying training...")
         print(f"Ocorreu um erro: {str(e)}")
