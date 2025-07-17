@@ -338,15 +338,16 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
 
   start = 0
 
-  with open(os.path.join(model_path, "training_status.pickle"), "rb") as f:
-    training_status = pickle.load(f)
-    if 'current' in training_status:
-      start = training_status['current']
-      print("Resuming from current = ", start)
-      list_of_predictions = training_status.get('list_of_predictions', [])
-      print("Resuming with list_of_predictions of size = ", len(list_of_predictions))
-    else:
-      print("Starting from scratch.")
+  if os.path.exists(os.path.join(model_path, "training_status.pickle")):
+    with open(os.path.join(model_path, "training_status.pickle"), "rb") as f:
+      training_status = pickle.load(f)
+      if 'current' in training_status:
+        start = training_status['current']
+        print("Resuming from current = ", start)
+        list_of_predictions = training_status.get('list_of_predictions', [])
+        print("Resuming with list_of_predictions of size = ", len(list_of_predictions))
+      else:
+        print("Starting from scratch.")
 
   step = training_examples
   end = df_project.shape[0]
