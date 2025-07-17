@@ -12,6 +12,7 @@ from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
 from codeflowlm.test import test
 from codeflowlm.threshold import calculate_th_from_test
+from time import time
 
 projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'commons-codec','commons-collections',
@@ -324,6 +325,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                                 m=1.5, train_from_scratch=True, batch_size=16):
   list_of_results = []
   list_of_predictions = []
+
   print('len(training_pool) = ', len(training_pool))
   print('len(training_queue) = ', len(training_queue))
 
@@ -335,14 +337,27 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   trained = 0
 
   start = 0
+
+  with open(os.path.join(model_path, "training_status.pickle"), "rb") as f:
+    training_status = pickle.load(f)
+    if 'current' in training_status:
+      start = training_status['current']
+      print("Resuming from current = ", start)
+      list_of_predictions = training_status.get('list_of_predictions', [])
+      print("Resuming with list_of_predictions of size = ", len(list_of_predictions))
+    else:
+      print("Starting from scratch.")
+
   step = training_examples
   end = df_project.shape[0]
   
-  
   check_df_project_sorted(df_project)
+  execution_start = time()
+  max_exec_time = 40 * 60 * 60 #40 hours
 
   for current in range(start, end, step):
     print('current = ', current)
+    
     if train_from_scratch:
       df_train = df_project[:current].copy() #all data
       # TESTE 24/06/25
@@ -407,9 +422,16 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
 
     list_of_predictions.append(predictions)
 
+    if time() > execution_start + max_exec_time:
+      #pauses execution
+      print("Maximum execution time reached.  Saving current state...")
+      with open(os.path.join(model_path, "training_status.pickle"), "wb") as f:
+        pickle.dump({"current":current + step, "list_of_predictions":list_of_predictions}, f)
+      return list_of_results, list_of_predictions, False
+
   print("Final training pool size = ", len(training_pool))
 
-  return list_of_results, list_of_predictions
+  return list_of_results, list_of_predictions, True
 
 def train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, full_changes_train_file, 
                                                 full_changed_valid_file, full_changes_test_file, project, df_project, 
@@ -456,7 +478,7 @@ def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full
   if not model_path:
     model_path = model_root + pretrained_model + f"/concat/online/baseline/{project}_best_{early_stop_metric}/checkpoints"
 
-  results, list_of_predictions = train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, 
+  results, list_of_predictions, finished = train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, 
                                                                              full_changes_train_file, 
                                                                              full_changed_valid_file, 
                                                                              full_changes_test_file, project, 
@@ -488,7 +510,7 @@ def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full
   predictions = {'true_labels': df_project['is_buggy_commit'].tolist(),
                  'pred_labels': pred_labels, 'pred_probs': pred_probs}
 
-  return results, predictions, model_path
+  return results, predictions, model_path, finished
 
 def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
                                full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, 
@@ -527,7 +549,7 @@ def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_gu
     df = pd.DataFrame(columns=columns)
 
     if project in projects_with_real_lat_ver:
-      _, predictions, model_path = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
+      _, predictions, model_path, finished = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
                                                  full_features_train_file, full_features_valid_file, 
                                                  full_features_test_file, full_changes_train_file, 
                                                  full_changed_valid_file, full_changes_test_file, project, 
@@ -539,7 +561,7 @@ def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_gu
                                                  start=start, end=end, pretrained_model=pretrained_model, 
                                                  train_from_scratch=train_from_scratch, batch_size=batch_size)
     else:
-      _, predictions, model_path = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
+      _, predictions, model_path, finished = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
                                                  full_features_train_file, full_features_valid_file, 
                                                  full_features_test_file, full_changes_train_file, 
                                                  full_changed_valid_file, full_changes_test_file, project, 
@@ -551,17 +573,24 @@ def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_gu
                                                  start=start, end=end, pretrained_model=pretrained_model, 
                                                  train_from_scratch=train_from_scratch, batch_size=batch_size)
 
-    with open(f'{model_path}/{project}_predictions_wp.pkl', 'wb') as f:
-      pickle.dump(predictions, f)
+    if finished:
+      print("Training finished successfully.")
+      
+      with open(f'{model_path}/{project}_predictions_wp.pkl', 'wb') as f:
+        pickle.dump(predictions, f)
+      
+      calculate_metrics_and_plot(model_root, project, early_stop_metric, decay_factor, results_folder, pretrained_model, df, predictions, model_path)
 
+def calculate_metrics_and_plot(model_root, project, early_stop_metric, decay_factor, results_folder, pretrained_model, 
+                               df, predictions, model_path):
     mean_g_mean, std_g_mean, mean_r_diff, std_r_diff, mean_f1, std_f1, mean_precision, std_precision, mean_recall, std_recall, mean_r0, std_r0, mean_r1, std_r1, roc_auc, metrics = calculate_prequential_mean_and_std(predictions, decay_factor=decay_factor)
 
     plot(metrics, model_path)
 
     df.loc[len(df)] = [project, mean_g_mean, mean_f1, mean_precision,
-                       mean_recall, mean_r0, mean_r1, mean_r_diff, std_g_mean,
-                       std_f1, std_precision, std_recall, std_r0, std_r1,
-                       std_r_diff]
+                        mean_recall, mean_r0, mean_r1, mean_r_diff, std_g_mean,
+                        std_f1, std_precision, std_recall, std_r0, std_r1,
+                        std_r_diff]
     base_path = model_root + pretrained_model + '/concat/online/baseline'
     path = base_path + f'/{results_folder}'
     df.to_csv(f'{path}/{project}_results_wp.csv', index=False)
