@@ -21,7 +21,7 @@ projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'commons-jcs','commons-lang','commons-math',
                                 'commons-net','commons-scxml',
                                 'commons-validator','commons-vfs','gora',
-                                'parquet-mr']
+                                'parquet-mr', 'giraph', 'opennlp']
 
 batches = []
 
