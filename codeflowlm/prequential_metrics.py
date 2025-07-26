@@ -8,11 +8,8 @@ def prequential_recalls(predictions, fading_factor):
     counts = np.zeros(2)
     hits = np.zeros(2)
 
-    print('results = ', predictions)
     targets = predictions['true_labels']
     predictions = predictions['pred_labels']
-    print('targets = ', targets)
-    print('predictions = ', predictions)
     print('len(targets) = ', len(targets))
     print('len(predictions) = ', len(predictions))
     n_samples = len(targets)
