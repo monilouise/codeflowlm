@@ -361,10 +361,8 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
     
     if train_from_scratch:
       df_train = df_project[:current].copy() #all data
-      # TESTE 24/06/25
       training_queue.clear()
       buggy_pool.clear()
-      #FIM TESTE 24/06/25
     else:
       df_train = df_project[max(current - step, 0):current].copy() #only recent data
 
@@ -518,29 +516,6 @@ def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_gu
                                early_stop_metric="gmean", adjust_th=False, do_oversample=True, skewed_oversample=False, 
                                adjust_th_on_test=False, seed=33, decay_factor=0.99, window_size=100, target_th=0.5, l0=10, l1=12 , 
                                m=1.5, results_folder='', start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16):
-  #projects = [
-      #'ant-ivy', #repetir teste init
-      #'commons-bcel', #repetir teste init
-      #'commons-beanutils', #repetir teste init
-      #'commons-codec',
-      #'commons-collections',
-      #'commons-compress',
-      #'commons-configuration',
-      #'commons-dbcp', #correção aqui (índices do dataset).  Poder ser o caso de retreinar os anteriores  teste init.
-      #'commons-digester', #it's a very bad project -> run without true latency verification!
-      #'commons-io',
-      #'commons-jcs',
-      #'commons-lang',
-      #'commons-math',
-      #'commons-net',
-      #'commons-scxml',
-      #'commons-validator',
-      #'commons-vfs',
-      #'giraph',
-      #'gora',
-      #'opennlp',
-      #'parquet-mr'
-   # ]
 
     columns = ['project', 'g_mean', 'f1', 'precision', 'recall', 'R0', 'R1',
              '|R0-R1|', 'std_g_mean', 'std_f1', 'std_precision', 'std_recall',
@@ -549,30 +524,15 @@ def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_gu
     print(f"Project: {project}")
     df = pd.DataFrame(columns=columns)
 
-    if project in projects_with_real_lat_ver:
-      _, predictions, model_path, finished = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
-                                                 full_features_train_file, full_features_valid_file, 
-                                                 full_features_test_file, full_changes_train_file, 
-                                                 full_changed_valid_file, full_changes_test_file, project, 
-                                                 early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
-                                                 adjust_th=adjust_th, do_oversample=do_oversample, 
-                                                 skewed_oversample=skewed_oversample, 
-                                                 adjust_th_on_test=adjust_th_on_test, seed=seed, 
-                                                 window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, 
-                                                 start=start, end=end, pretrained_model=pretrained_model, 
-                                                 train_from_scratch=train_from_scratch, batch_size=batch_size)
-    else:
-      _, predictions, model_path, finished = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
-                                                 full_features_train_file, full_features_valid_file, 
-                                                 full_features_test_file, full_changes_train_file, 
-                                                 full_changed_valid_file, full_changes_test_file, project, 
-                                                 early_stop_metric=early_stop_metric, do_real_lat_ver=False, 
-                                                 adjust_th=adjust_th, do_oversample=do_oversample, 
-                                                 skewed_oversample=skewed_oversample, 
-                                                 adjust_th_on_test=adjust_th_on_test, seed=seed, 
-                                                 window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, 
-                                                 start=start, end=end, pretrained_model=pretrained_model, 
-                                                 train_from_scratch=train_from_scratch, batch_size=batch_size)
+    _, predictions, model_path, finished = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
+                                                         full_features_train_file, full_features_valid_file, full_features_test_file, 
+                                                         full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
+                                                         project, early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
+                                                         adjust_th=adjust_th, do_oversample=do_oversample, 
+                                                         skewed_oversample=skewed_oversample, adjust_th_on_test=adjust_th_on_test, 
+                                                         seed=seed, window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, 
+                                                         start=start, end=end, pretrained_model=pretrained_model, 
+                                                         train_from_scratch=train_from_scratch, batch_size=batch_size)
 
     if finished:
       print("Training finished successfully.")
