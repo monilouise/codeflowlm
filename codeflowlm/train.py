@@ -315,14 +315,29 @@ def check_df_project_sorted(df_project):
     if not timestamps.is_monotonic_increasing:
       raise ValueError("df_project is NOT increasingly sorted by 'author_date_unix_timestamp'.")
     print("df_project IS increasingly sorted by 'author_date_unix_timestamp'")
+    
+def merge_cross_project_data(df_features_full, df_train, project):
+  #Builds training queue and training pool based on latency verification and buggy commit detection.  For cross-project JIT-SDP, adds other projects data.
+  max_timestamp = df_train['author_date_unix_timestamp'].max()
+  df_others = df_features_full[
+    (df_features_full['project'] != project) & 
+    (df_features_full['author_date_unix_timestamp'] < max_timestamp)
+  ] if df_features_full is not None else pd.DataFrame()
+  
+  # Concatenate df_train and df_others, maintaining ascending order by author_date_unix_timestamp
+  if not df_others.empty:
+    df_train = pd.concat([df_train, df_others], ignore_index=True)
+    df_train = df_train.sort_values(by='author_date_unix_timestamp', ascending=True).reset_index(drop=True)
+  
+  return df_train
 
-def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                                 full_changes_test_file, project, df_project, model_path, training_pool, training_queue, 
                                 map_commit_to_row, buggy_pool=[], training_examples=50, th=0.5, adjust_th=False,
                                 eval_metric="f1", do_oversample=False, do_undersample=False, 
                                 pretrained_model='codet5p-770m', do_real_lat_ver=False, skewed_oversample=False,
                                 adjust_th_on_test=False, seed=33, window_size=100, target_th=0.5, l0=10, l1=12,
-                                m=1.5, train_from_scratch=True, batch_size=16):
+                                m=1.5, train_from_scratch=True, batch_size=16, df_features_full=None, cross_project=False):
   list_of_results = []
   list_of_predictions = []
 
@@ -370,6 +385,9 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
     df_test = df_project[current:min(current + step, end)].copy()
     df_test.to_csv(f'df_test_{current}.csv')
 
+    if cross_project:
+      df_train = merge_cross_project_data(df_features_full, df_train, project)
+        
     last_timestamp = prepare_train_data(df_train, training_pool, training_queue,
                                         map_commit_to_row, buggy_pool,
                                         do_real_lat_ver=do_real_lat_ver)
@@ -380,7 +398,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
       #Train
       try:
         print("Current training date: ", datetime.fromtimestamp(last_timestamp))
-        th, trained = train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+        th, trained = train(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                             full_changes_test_file, project, model_path, training_pool, th=th, 
                             adjust_th=adjust_th and (not adjust_th_on_test), eval_metric=eval_metric, 
                             do_oversample=do_oversample and (not skewed_oversample), do_undersample=do_undersample,
@@ -398,13 +416,13 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
     if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
       if adjust_th_on_test:
         print("Calculating new th...")
-        _, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+        _, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                               full_changes_test_file, project, df_test[-window_size:], model_path, th=th, 
                               pretrained_model=pretrained_model, calculate_metrics=calculate_metrics, 
                               eval_metric=eval_metric, batch_size=batch_size)
         th = calculate_th_from_test(predictions, target_th=target_th)
 
-      results, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+      results, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                                   full_changes_test_file, project, df_test, model_path, th=th, 
                                   pretrained_model=pretrained_model, calculate_metrics=calculate_metrics,
                                   eval_metric=eval_metric, batch_size=batch_size)
@@ -433,11 +451,11 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   return list_of_results, list_of_predictions, True
 
 def train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, full_changes_train_file, 
-                                                full_changed_valid_file, full_changes_test_file, project, df_project, 
+                                                full_changes_valid_file, full_changes_test_file, project, df_project, 
                                                 model_path, early_stop_metric='f1', do_real_lat_ver=False, 
                                                 adjust_th=False, do_oversample=True, skewed_oversample=False,
                                                 adjust_th_on_test=False, seed=33, window_size=100, target_th=0.5, l0=10, l1=12,
-                                                m=1.5, pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16):
+                                                m=1.5, pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16, df_features_full=None, cross_project=False):
   batches = []
   training_pool = []
   training_queue = []
@@ -445,20 +463,20 @@ def train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, full
   map_commit_to_row = dict()
   print('len(batches) in train_on_line_with_new_data_with_early_stop(): ',
         len(batches))
-  return train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, 
+  return train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                                      full_changes_test_file, project, df_project, model_path, training_pool, 
                                      training_queue, map_commit_to_row, buggy_pool, eval_metric=early_stop_metric,
                                      do_oversample=do_oversample, do_real_lat_ver=do_real_lat_ver, adjust_th=adjust_th, 
                                      skewed_oversample=skewed_oversample, adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size,
                                      target_th=target_th, l0=l0, l1=l1, m=m, pretrained_model=pretrained_model,
-                                     train_from_scratch=train_from_scratch, batch_size=batch_size)
+                                     train_from_scratch=train_from_scratch, batch_size=batch_size, df_features_full=df_features_full, cross_project=cross_project)
 
 def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full_features_train_file, 
                   full_features_valid_file, full_features_test_file, full_changes_train_file, full_changed_valid_file, 
                   full_changes_test_file, project, early_stop_metric="gmean", do_real_lat_ver=False, adjust_th=False, 
                   do_oversample=True, model_path=None, skewed_oversample=False, adjust_th_on_test=False, seed=33, 
                   window_size=100, target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, 
-                  pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16):
+                  pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16, cross_project=False):
   df_features_full = get_df_features_full(full_features_train_file, full_features_valid_file, full_features_test_file)
   df_project = df_features_full[df_features_full['project'] == project]
   rows1 = df_project.shape[0]
@@ -492,7 +510,7 @@ def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full
                                                                              target_th=target_th, l0=l0, l1=l1, m=m, 
                                                                              pretrained_model=pretrained_model, 
                                                                              train_from_scratch=train_from_scratch,
-                                                                             batch_size=batch_size)
+                                                                             batch_size=batch_size, df_features_full=df_features_full, cross_project=cross_project)
 
   true_labels = []
   pred_labels = []
@@ -515,7 +533,7 @@ def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_gu
                                full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, 
                                early_stop_metric="gmean", adjust_th=False, do_oversample=True, skewed_oversample=False, 
                                adjust_th_on_test=False, seed=33, decay_factor=0.99, window_size=100, target_th=0.5, l0=10, l1=12 , 
-                               m=1.5, results_folder='', start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16):
+                               m=1.5, results_folder='', start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16, cross_project=False):
 
     columns = ['project', 'g_mean', 'f1', 'precision', 'recall', 'R0', 'R1',
              '|R0-R1|', 'std_g_mean', 'std_f1', 'std_precision', 'std_recall',
@@ -532,7 +550,7 @@ def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_gu
                                                          skewed_oversample=skewed_oversample, adjust_th_on_test=adjust_th_on_test, 
                                                          seed=seed, window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, 
                                                          start=start, end=end, pretrained_model=pretrained_model, 
-                                                         train_from_scratch=train_from_scratch, batch_size=batch_size)
+                                                         train_from_scratch=train_from_scratch, batch_size=batch_size,cross_project=cross_project)
 
     if finished:
       print("Training finished successfully.")
