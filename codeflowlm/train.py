@@ -220,10 +220,10 @@ def add_to_cumulative_training_pool(row, global_training_pool):
 
   global_training_pool.append(row)
 
-def train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, model_path, training_pool, 
-          use_only_new_data=True, th=0.5, adjust_th=False, eval_metric="f1", do_oversample=False, do_undersample=False,
-          pretrained_model='codet5p-770m', trained=0, skewed_oversample=False, adjust_th_on_test=False, peft_alg="lora",
-          seed=33, window_size=100, target_th=0.5, l0=10, l1=12, m=1.5, batch_size=16):
+def train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, model_path, 
+          training_pool, use_only_new_data=True, th=0.5, eval_metric="f1", do_oversample=False, do_undersample=False, 
+          pretrained_model='codet5p-770m', trained=0, skewed_oversample=False, peft_alg="lora", seed=33, window_size=100, 
+          target_th=0.5, l0=10, l1=12, m=1.5, batch_size=16, cross_project=False):
 
   if os.path.exists(os.path.join(model_path, "training_status.txt")):
     os.remove(os.path.join(model_path, "training_status.txt"))
@@ -232,7 +232,11 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
 
   print("Training pool size = ", df.shape[0])
 
-  changes_train_file, features_train_file, changes_valid_file, features_valid_file = prepare_training_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, df)
+  changes_train_file, features_train_file, changes_valid_file, features_valid_file = prepare_training_data(path, 
+                                                                                                           full_changes_train_file, 
+                                                                                                           full_changed_valid_file, 
+                                                                                                           full_changes_test_file, 
+                                                                                                           project, df)
 
   batches.append(df)
 
@@ -281,6 +285,9 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
 
   if peft_alg == "lora":
     command += """--use_lora """
+    
+  if cross_project:
+    command += """--cross_project """
 
   try:
     file_to_monitor = f'{model_path}/model.bin'
@@ -316,7 +323,7 @@ def check_df_project_sorted(df_project):
       raise ValueError("df_project is NOT increasingly sorted by 'author_date_unix_timestamp'.")
     print("df_project IS increasingly sorted by 'author_date_unix_timestamp'")
     
-def merge_cross_project_data(df_features_full, df_train, project):
+def merge_cross_project_data(df_features_full, df_train, project):    
   #Builds training queue and training pool based on latency verification and buggy commit detection.  For cross-project JIT-SDP, adds other projects data.
   max_timestamp = df_train['author_date_unix_timestamp'].max()
   df_others = df_features_full[
@@ -399,12 +406,11 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
       try:
         print("Current training date: ", datetime.fromtimestamp(last_timestamp))
         th, trained = train(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
-                            full_changes_test_file, project, model_path, training_pool, th=th, 
-                            adjust_th=adjust_th and (not adjust_th_on_test), eval_metric=eval_metric, 
+                            full_changes_test_file, project, model_path, training_pool, th=th, eval_metric=eval_metric, 
                             do_oversample=do_oversample and (not skewed_oversample), do_undersample=do_undersample,
-                            pretrained_model=pretrained_model, trained=trained, skewed_oversample=skewed_oversample,
-                            adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, target_th=target_th, l0=l0,
-                            l1=l1, m=m, batch_size=batch_size)
+                            pretrained_model=pretrained_model, trained=trained, skewed_oversample=skewed_oversample, seed=seed, 
+                            window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, batch_size=batch_size, 
+                            cross_project=cross_project)
       except Exception as e:
         print("Not enough labeled training/validation data.  Delaying training...")
         print(f"Ocorreu um erro: {str(e)}")
