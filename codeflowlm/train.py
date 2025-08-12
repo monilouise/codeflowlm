@@ -101,8 +101,8 @@ def prepare_training_data(path, full_changes_train_file, full_changed_valid_file
 
   print("df['is_buggy_commit'].sum() = ", df['is_buggy_commit'].sum())
 
-  if df['is_buggy_commit'].sum() >= 2 and val_bug_ratio == 0:
-    #Muda a divisão dos dados de forma que o conjuntp de validação contenha ao menos o segundo exemplo positivo
+  if df['is_buggy_commit'].sum() >= 2 and (train_bug_ratio == 0 or val_bug_ratio == 0):
+    #Muda a divisão dos dados de forma que o conjuntp de validação contenha ao menos o último exemplo positivo
     condition = (df['is_buggy_commit'] == 1) | (df['is_buggy_commit'] == 1.0)
     indices = df[condition].index.tolist()
     val_start = indices[-1]
