@@ -61,7 +61,10 @@ def is_valid_training_data(training_pool):
   #07/07/2025: pelo menos um exemplo positivo e um exemplo negativo
   return df.shape[0] > 0 and df['is_buggy_commit'].sum() >= 1 and df['is_buggy_commit'].sum() < df.shape[0]
 
-def prepare_training_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, df, do_eval_with_all_negative=False):
+#Mudança 12/08/2025: Setei do_eval_with_all_negative=True para que a validação seja feita com a loss de validação caso não haja exemplo
+#de validação positivo
+def prepare_training_data(path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, df, 
+                          do_eval_with_all_negative=True):
   if 'first_fix_date' in df.columns and 'fixes' in df.columns:
     df = df.drop(columns=['first_fix_date', 'fixes'])
 
