@@ -325,13 +325,15 @@ def check_df_project_sorted(df_project):
     if not timestamps.is_monotonic_increasing:
       raise ValueError("df_project is NOT increasingly sorted by 'author_date_unix_timestamp'.")
     print("df_project IS increasingly sorted by 'author_date_unix_timestamp'")
-    
-def merge_cross_project_data(df_features_full, df_train, project):    
+
+def merge_cross_project_data(df_features_full, df_train, project, initial_cp_timestamp=0):
   #Builds training queue and training pool based on latency verification and buggy commit detection.  For cross-project JIT-SDP, adds other projects data.
   max_timestamp = df_train['author_date_unix_timestamp'].max()
+  print(f"Cross-project training enabled. Merging data from other projects with timestamps between {datetime.fromtimestamp(initial_cp_timestamp)} and {datetime.fromtimestamp(max_timestamp)}")
   df_others = df_features_full[
     (df_features_full['project'] != project) & 
-    (df_features_full['author_date_unix_timestamp'] < max_timestamp)
+    (df_features_full['author_date_unix_timestamp'] < max_timestamp &
+     df_features_full['author_date_unix_timestamp'] >= initial_cp_timestamp)
   ] if df_features_full is not None else pd.DataFrame()
   
   # Concatenate df_train and df_others, maintaining ascending order by author_date_unix_timestamp
@@ -339,7 +341,7 @@ def merge_cross_project_data(df_features_full, df_train, project):
     df_train = pd.concat([df_train, df_others], ignore_index=True)
     df_train = df_train.sort_values(by='author_date_unix_timestamp', ascending=True).reset_index(drop=True)
   
-  return df_train
+  return df_train, max_timestamp
 
 def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                                 full_changes_test_file, project, df_project, model_path, training_pool, training_queue, 
@@ -380,6 +382,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   check_df_project_sorted(df_project)
   execution_start = time()
   max_exec_time = 40 * 60 * 60 #40 hours
+  max_timestamp_for_cp = 0
 
   for current in range(start, end, step):
     print('current = ', current)
@@ -395,13 +398,15 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
     df_test = df_project[current:min(current + step, end)].copy()
     df_test.to_csv(f'df_test_{current}.csv')
 
-    if cross_project:
-      df_train = merge_cross_project_data(df_features_full, df_train, project)
-        
+    df_train, max_timestamp_for_cp = adjust_train_data(project, df_features_full, cross_project, df_train, 
+                                                       initial_cp_timestamp=max_timestamp_for_cp)
+
     last_timestamp = prepare_train_data(df_train, training_pool, training_queue,
                                         map_commit_to_row, buggy_pool,
                                         do_real_lat_ver=do_real_lat_ver)
-
+    
+    #TODO: Se esta verificação passar, remover a variável redundante
+    assert last_timestamp == max_timestamp_for_cp, "Last timestamp does not match max timestamp."
     print("Training pool size = ", len(training_pool))
 
     if is_valid_training_data(training_pool):
@@ -458,6 +463,11 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   print("Final training pool size = ", len(training_pool))
 
   return list_of_results, list_of_predictions, True
+
+def adjust_train_data(project, df_features_full, cross_project, df_train, initial_cp_timestamp=0):
+    if cross_project:
+      df_train, max_timestamp = merge_cross_project_data(df_features_full, df_train, project, initial_cp_timestamp)
+    return df_train, max_timestamp
 
 def train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, full_changes_train_file, 
                                                 full_changes_valid_file, full_changes_test_file, project, df_project, 
