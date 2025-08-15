@@ -408,7 +408,9 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                                         do_real_lat_ver=do_real_lat_ver)
     
     #TODO: Se esta verificação passar, remover a variável redundante
-    assert last_timestamp == max_timestamp_for_cp, "Last timestamp does not match max timestamp."
+    if cross_project:
+      assert last_timestamp == max_timestamp_for_cp, "Last timestamp does not match max timestamp."
+    
     print("Training pool size = ", len(training_pool))
 
     if is_valid_training_data(training_pool):
@@ -469,7 +471,9 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
 def adjust_train_data(project, df_features_full, cross_project, df_train, initial_cp_timestamp=0):
     if cross_project:
       df_train, max_timestamp = merge_cross_project_data(df_features_full, df_train, project, initial_cp_timestamp)
-    return df_train, max_timestamp
+      return df_train, max_timestamp
+    else:
+      return df_train, 0
 
 def train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, full_changes_train_file, 
                                                 full_changes_valid_file, full_changes_test_file, project, df_project, 
