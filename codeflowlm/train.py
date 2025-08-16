@@ -337,11 +337,16 @@ def merge_cross_project_data(df_features_full, df_train, project, initial_cp_tim
   
   print(f"Cross-project training enabled. Merging data from other projects with timestamps between {datetime.fromtimestamp(initial_cp_timestamp)} and {datetime.fromtimestamp(max_timestamp)}")
   if df_features_full is not None:
+    """
     df_others = df_features_full[
       ((df_features_full['project'] != project) & 
        (df_features_full['author_date_unix_timestamp'] < max_timestamp) &
        (df_features_full['author_date_unix_timestamp'] >= initial_cp_timestamp))
     ]
+    """
+    df_others = df_features_full[df_features_full['project'] != project]
+    df_others = df_others[df_others['author_date_unix_timestamp'] < max_timestamp]
+    df_others = df_others[df_others['author_date_unix_timestamp'] >= initial_cp_timestamp]
   else:
     df_others = pd.DataFrame()
   
