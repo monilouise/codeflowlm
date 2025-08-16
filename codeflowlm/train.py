@@ -418,22 +418,13 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                                                        initial_cp_timestamp=max_timestamp_for_cp, current_timestamp=current_timestamp)
 
     # Builds training queue and training pool based on latency verification and buggy commit detection.  
-    last_timestamp = prepare_train_data(df_train, training_pool, training_queue,
-                                        map_commit_to_row, buggy_pool,
-                                        do_real_lat_ver=do_real_lat_ver)
-    
-    #TODO: Se esta verificação passar, remover a variável redundante
-    if cross_project:
-      print(f"last_timestamp = {datetime.fromtimestamp(last_timestamp)}")
-      print(f"max_timestamp_for_cp = {datetime.fromtimestamp(max_timestamp_for_cp)}")
-      assert last_timestamp == max_timestamp_for_cp, "Last timestamp does not match max timestamp."
+    _ = prepare_train_data(df_train, training_pool, training_queue, map_commit_to_row, buggy_pool, do_real_lat_ver=do_real_lat_ver)
     
     print("Training pool size = ", len(training_pool))
 
     if is_valid_training_data(training_pool):
       #Train
       try:
-        print("Current training date: ", datetime.fromtimestamp(last_timestamp))
         th, trained = train(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                             full_changes_test_file, project, model_path, training_pool, th=th, eval_metric=eval_metric, 
                             do_oversample=do_oversample and (not skewed_oversample), do_undersample=do_undersample,
