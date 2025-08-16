@@ -327,9 +327,14 @@ def check_df_project_sorted(df_project):
       raise ValueError("df_project is NOT increasingly sorted by 'author_date_unix_timestamp'.")
     print("df_project IS increasingly sorted by 'author_date_unix_timestamp'")
 
-def merge_cross_project_data(df_features_full, df_train, project, initial_cp_timestamp=0):
-  #Builds training queue and training pool based on latency verification and buggy commit detection.  For cross-project JIT-SDP, adds other projects data.
-  max_timestamp = df_train['author_date_unix_timestamp'].max()
+def merge_cross_project_data(df_features_full, df_train, project, initial_cp_timestamp=0, current_timestamp=0):
+  # For cross-project JIT-SDP, adds other projects data.  
+  max_timestamp = 0
+  if len(df_train) == 0:
+    max_timestamp = current_timestamp
+  else:
+    max_timestamp = df_train['author_date_unix_timestamp'].max()
+  
   print(f"Cross-project training enabled. Merging data from other projects with timestamps between {datetime.fromtimestamp(initial_cp_timestamp)} and {datetime.fromtimestamp(max_timestamp)}")
   df_others = df_features_full[
     (df_features_full['project'] != project) & 
@@ -388,7 +393,8 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
 
   for current in range(start, end, step):
     print('current = ', current)
-    
+    current_timestamp = df_project['author_date_unix_timestamp'].iloc[current]
+
     if train_from_scratch:
       df_train = df_project[:current].copy() #all data
       training_queue.clear()
@@ -401,8 +407,9 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
     df_test.to_csv(f'df_test_{current}.csv')
 
     df_train, max_timestamp_for_cp = adjust_train_data(project, df_features_full, cross_project, df_train, 
-                                                       initial_cp_timestamp=max_timestamp_for_cp)
+                                                       initial_cp_timestamp=max_timestamp_for_cp, current_timestamp=current_timestamp)
 
+    # Builds training queue and training pool based on latency verification and buggy commit detection.  
     last_timestamp = prepare_train_data(df_train, training_pool, training_queue,
                                         map_commit_to_row, buggy_pool,
                                         do_real_lat_ver=do_real_lat_ver)
@@ -468,9 +475,9 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
 
   return list_of_results, list_of_predictions, True
 
-def adjust_train_data(project, df_features_full, cross_project, df_train, initial_cp_timestamp=0):
+def adjust_train_data(project, df_features_full, cross_project, df_train, initial_cp_timestamp=0, current_timestamp=0):
     if cross_project:
-      df_train, max_timestamp = merge_cross_project_data(df_features_full, df_train, project, initial_cp_timestamp)
+      df_train, max_timestamp = merge_cross_project_data(df_features_full, df_train, project, initial_cp_timestamp, current_timestamp)
       return df_train, max_timestamp
     else:
       return df_train, 0
