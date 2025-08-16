@@ -424,8 +424,8 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
     
     #TODO: Se esta verificação passar, remover a variável redundante
     if cross_project:
-      print(f"last_timestamp = {last_timestamp}")
-      print(f"max_timestamp_for_cp = {max_timestamp_for_cp}")
+      print(f"last_timestamp = {datetime.fromtimestamp(last_timestamp)}")
+      print(f"max_timestamp_for_cp = {datetime.fromtimestamp(max_timestamp_for_cp)}")
       assert last_timestamp == max_timestamp_for_cp, "Last timestamp does not match max timestamp."
     
     print("Training pool size = ", len(training_pool))
