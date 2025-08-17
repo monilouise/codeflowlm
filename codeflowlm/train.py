@@ -515,8 +515,6 @@ def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full
                   do_eval_with_all_negative=False):
   
   df_features_full = get_df_features_full(full_features_train_file, full_features_valid_file, full_features_test_file)
-  df_features_full = adjust_df_features_full(commit_guru_path, cross_project, df_features_full)
-
   df_project = df_features_full[df_features_full['project'] == project]
   rows1 = df_project.shape[0]
   print('df_project.shape before: ', df_project.shape)
@@ -524,6 +522,8 @@ def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full
   rows2 = df_project.shape[0]
   print('df_project.shape after: ', df_project.shape)
   assert rows1 == rows2
+
+  df_features_full = adjust_df_features_full(commit_guru_path, cross_project, df_features_full)
 
   if not end:
     end = df_project.shape[0]
