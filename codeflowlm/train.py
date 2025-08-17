@@ -513,7 +513,10 @@ def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full
                   window_size=100, target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, 
                   pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16, cross_project=False, 
                   do_eval_with_all_negative=False):
+  
   df_features_full = get_df_features_full(full_features_train_file, full_features_valid_file, full_features_test_file)
+  df_features_full = adjust_df_features_full(commit_guru_path, cross_project, df_features_full)
+
   df_project = df_features_full[df_features_full['project'] == project]
   rows1 = df_project.shape[0]
   print('df_project.shape before: ', df_project.shape)
@@ -566,6 +569,22 @@ def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full
                  'pred_labels': pred_labels, 'pred_probs': pred_probs}
 
   return results, predictions, model_path, finished
+
+def adjust_df_features_full(commit_guru_path, cross_project, df_features_full):
+    if cross_project:
+      projects = df_features_full['project'].unique()
+      df_features_full_with_first_fix_date = pd.DataFrame()
+    
+      for project in projects:
+        df_cross = df_features_full[df_features_full['project'] == project]
+        df_cross = add_first_fix_date(commit_guru_path, df_cross, project)
+        df_features_full_with_first_fix_date = pd.concat([df_features_full_with_first_fix_date, df_cross], ignore_index=True)
+    
+      df_features_full_with_first_fix_date = df_features_full_with_first_fix_date.sort_values(by='author_date_unix_timestamp', 
+                                                                                              ascending=True).reset_index(drop=True)
+      return df_features_full_with_first_fix_date
+    
+    return df_features_full
 
 def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
                                full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, 
