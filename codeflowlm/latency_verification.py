@@ -72,7 +72,7 @@ def do_real_latency_verification(row, training_pool, training_queue,
   for example in training_queue:
     example_row = map_commit_to_row[example[0]]
     if example_row['first_fix_date'] != 0 and example_row['first_fix_date'] < row['author_date_unix_timestamp']:
-      print(f"Current date: {row['author_date']}.  Promoting example fixed on {datetime.fromtimestamp(example_row['first_fix_date'])} to training pool.")
+      print(f"Current date: {row['author_date']}.  Promoting example from {example_row['project']} fixed on {datetime.fromtimestamp(example_row['first_fix_date'])} to training pool.")
       #volta o label para 1
       example_row['is_buggy_commit'] = 1.0
       #training_pool.append(map_commit_to_row[example[0]])
@@ -88,7 +88,7 @@ def do_real_latency_verification(row, training_pool, training_queue,
     timestamp2 = row['author_date_unix_timestamp']
 
     if get_difference(timestamp1, timestamp2) >= waiting_time:
-      print(f"Current date: {row['author_date']}.  Promoting example commited on {datetime.fromtimestamp(timestamp1)} to training pool.")
+      print(f"Current date: {row['author_date']}.  Promoting example from {example_row['project']} commited on {datetime.fromtimestamp(timestamp1)} to training pool.")
       #training_pool.append(map_commit_to_row[example[0]])
       add_to_training_pool(map_commit_to_row[example[0]], training_pool)
       training_queue.remove(example)
@@ -104,7 +104,7 @@ def do_real_latency_verification(row, training_pool, training_queue,
   for example in buggy_pool:
     example_row = map_commit_to_row[example[0]]
     if example_row['first_fix_date'] != 0 and example_row['first_fix_date'] < row['author_date_unix_timestamp']:
-      print(f"Current date: {row['author_date']}.  Promoting example fixed on {datetime.fromtimestamp(example_row['first_fix_date'])} to training pool.")
+      print(f"Current date: {row['author_date']}.  Promoting example from {example_row['project']} fixed on {datetime.fromtimestamp(example_row['first_fix_date'])} to training pool.")
       example_row['is_buggy_commit'] = 1.0
       #training_pool.append(example_row)
       add_to_training_pool(example_row, training_pool)
