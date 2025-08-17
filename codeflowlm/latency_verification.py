@@ -18,6 +18,7 @@ def add_first_fix_date(commit_guru_path, df, project):
     result = pd.merge(df, df_csv[['commit_hash', 'fixes']], on=['commit_hash'], how='left')
 
     result = result.fillna('')
+    print("result.columns = ", result.columns)
 
     for index, row in result.iterrows():
         if row['is_buggy_commit'] == 1:
