@@ -337,14 +337,10 @@ def merge_cross_project_data(df_features_full, df_train, project, initial_cp_tim
   
   print(f"Cross-project training enabled. Merging data from other projects with timestamps between {datetime.fromtimestamp(initial_cp_timestamp)} and {datetime.fromtimestamp(max_timestamp)}")
   if df_features_full is not None:
-    """
-    df_others = df_features_full[
-      ((df_features_full['project'] != project) & 
-       (df_features_full['author_date_unix_timestamp'] < max_timestamp) &
-       (df_features_full['author_date_unix_timestamp'] >= initial_cp_timestamp))
-    ]
-    """
     df_others = df_features_full[df_features_full['project'] != project]
+    df_others['author_date_unix_timestamp'] = pd.to_numeric(df_others['author_date_unix_timestamp'], errors='coerce')
+    max_timestamp = float(max_timestamp)
+    initial_cp_timestamp = float(initial_cp_timestamp)
     df_others = df_others[df_others['author_date_unix_timestamp'] < max_timestamp]
     df_others = df_others[df_others['author_date_unix_timestamp'] >= initial_cp_timestamp]
   else:
@@ -353,6 +349,7 @@ def merge_cross_project_data(df_features_full, df_train, project, initial_cp_tim
   # Concatenate df_train and df_others, maintaining ascending order by author_date_unix_timestamp
   if not df_others.empty:
     df_train = pd.concat([df_train, df_others], ignore_index=True)
+    df_train['author_date_unix_timestamp'] = pd.to_numeric(df_train['author_date_unix_timestamp'], errors='coerce')
     df_train = df_train.sort_values(by='author_date_unix_timestamp', ascending=True).reset_index(drop=True)
   
   return df_train, max_timestamp
@@ -396,7 +393,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   
   check_df_project_sorted(df_project)
   execution_start = time()
-  max_exec_time = 40 * 60 * 60 #40 hours
+  max_exec_time = 20 * 60 * 60 #20 hours
   max_timestamp_for_cp = 0
 
   for current in range(start, end, step):
