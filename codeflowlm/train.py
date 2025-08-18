@@ -333,7 +333,7 @@ def merge_cross_project_data(df_features_full, df_train, project, initial_cp_tim
   if len(df_train) == 0:
     max_timestamp = current_timestamp
   else:
-    max_timestamp = df_train['author_date_unix_timestamp'].max()
+    max_timestamp = pd.to_numeric(df_train['author_date_unix_timestamp'], errors='coerce').max()
   
   print(f"Cross-project training enabled. Merging data from other projects with timestamps between {datetime.fromtimestamp(initial_cp_timestamp)} and {datetime.fromtimestamp(max_timestamp)}")
   if df_features_full is not None:
