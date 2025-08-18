@@ -399,6 +399,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   for current in range(start, end, step):
     print('current = ', current)
     current_timestamp = df_project['author_date_unix_timestamp'].iloc[current]
+    print(f"current_timestamp = {datetime.fromtimestamp(int(float(current_timestamp)))}")
 
     if train_from_scratch:
       df_train = df_project[:current].copy() #all data
