@@ -452,7 +452,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                                   eval_metric=eval_metric, batch_size=batch_size)
       list_of_results.append(results)
     else:
-      print("No trained model found.")
+      print(f"No trained model found on {model_path}/checkpoint-best-{eval_metric}/model.bin")
       print(f"{model_path}/checkpoint-best-{eval_metric}/model.bin")
       print("df_test.shape[0] = ", df_test.shape[0])
       pred_label = [0] * df_test.shape[0]
