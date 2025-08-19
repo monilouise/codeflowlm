@@ -398,6 +398,8 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   max_exec_time = 20 * 60 * 60 #20 hours
   max_timestamp_for_cp = 0
 
+  print(df_project.head())
+
   for current in range(start, end, step):
     print('current = ', current)
     current_timestamp = df_project['author_date_unix_timestamp'].iloc[current]
