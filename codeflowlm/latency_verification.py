@@ -84,6 +84,7 @@ def do_real_latency_verification(row, training_pool, training_queue,
   #Checks for examples older than waiting time to promote them to training pool
   for example in training_queue:
     #timestamp1 = example['author_date_unix_timestamp']
+    example_row = map_commit_to_row[example[0]]
     timestamp1 = example[1]
     timestamp2 = row['author_date_unix_timestamp']
 
