@@ -293,10 +293,12 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
   if cross_project:
     command += """--cross_project """
 
+  """
   try:
     file_to_monitor = f'{model_path}/model.bin'
   except FileNotFoundError:
     print(f"File '{file_to_monitor}' not found.")
+    """
 
   print(f"Training with th={th}...")
   execute_command(command)
@@ -310,12 +312,12 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
       file_contents = file.read()
 
       if file_contents == 'changed':
-        print(f"File '{file_to_monitor}' has changed!")
+        print(f"Model file has changed!")
         #Clear training pool
         training_pool.clear()
         trained += len(set([sample['commit_hash'] for sample in training_pool]))
       else:
-        print(f"File '{file_to_monitor}' has not changed.  Keeping training data.")
+        print(f"Model file has not changed.  Keeping training data.")
 
   return th, trained
 
@@ -396,6 +398,8 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   max_exec_time = 20 * 60 * 60 #20 hours
   max_timestamp_for_cp = 0
 
+  print(df_project.head())
+
   for current in range(start, end, step):
     print('current = ', current)
     current_timestamp = df_project['author_date_unix_timestamp'].iloc[current]
@@ -452,7 +456,8 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                                   eval_metric=eval_metric, batch_size=batch_size)
       list_of_results.append(results)
     else:
-      print("No trained model found.")
+      #file_to_monitor = f'{model_path}/model.bin'
+      print(f"No trained model found on {model_path}/checkpoint-best-{eval_metric}/model.bin")
       print(f"{model_path}/checkpoint-best-{eval_metric}/model.bin")
       print("df_test.shape[0] = ", df_test.shape[0])
       pred_label = [0] * df_test.shape[0]
