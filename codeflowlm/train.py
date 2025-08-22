@@ -356,6 +356,12 @@ def merge_cross_project_data(df_features_full, df_train, project, initial_cp_tim
   
   return df_train, max_timestamp
 
+def save_execution_status(model_path, current, step, list_of_predictions, list_of_results):
+  with open(os.path.join(model_path, "training_status.pickle"), "wb") as f:
+        pickle.dump({"current":current + step, "list_of_predictions":list_of_predictions}, f)
+  return list_of_results, list_of_predictions, False
+
+
 def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                                 full_changes_test_file, project, df_project, model_path, training_pool, training_queue, 
                                 map_commit_to_row, buggy_pool=[], training_examples=50, th=0.5, adjust_th=False,
@@ -401,79 +407,86 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   print(df_project.head())
 
   for current in range(start, end, step):
-    print('current = ', current)
-    current_timestamp = df_project['author_date_unix_timestamp'].iloc[current]
-    print(f"current_timestamp = {datetime.fromtimestamp(int(float(current_timestamp)))}")
+    try:
+      print('current = ', current)
+      current_timestamp = df_project['author_date_unix_timestamp'].iloc[current]
+      print(f"current_timestamp = {datetime.fromtimestamp(int(float(current_timestamp)))}")
 
-    if train_from_scratch:
-      df_train = df_project[:current].copy() #all data
-      training_queue.clear()
-      buggy_pool.clear()
-    else:
-      df_train = df_project[max(current - step, 0):current].copy() #only recent data
+      if train_from_scratch:
+        df_train = df_project[:current].copy() #all data
+        training_queue.clear()
+        buggy_pool.clear()
+      else:
+        df_train = df_project[max(current - step, 0):current].copy() #only recent data
 
-    df_train.to_csv(f'df_train_{current}.csv')
-    df_test = df_project[current:min(current + step, end)].copy()
-    df_test.to_csv(f'df_test_{current}.csv')
+      df_train.to_csv(f'df_train_{current}.csv')
+      df_test = df_project[current:min(current + step, end)].copy()
+      df_test.to_csv(f'df_test_{current}.csv')
 
-    df_train, max_timestamp_for_cp = adjust_train_data(project, df_features_full, cross_project, df_train, 
-                                                       initial_cp_timestamp=max_timestamp_for_cp, current_timestamp=current_timestamp)
+      df_train, max_timestamp_for_cp = adjust_train_data(project, df_features_full, cross_project, df_train, 
+                                                        initial_cp_timestamp=max_timestamp_for_cp, current_timestamp=current_timestamp)
 
-    # Builds training queue and training pool based on latency verification and buggy commit detection.  
-    _ = prepare_train_data(df_train, training_pool, training_queue, map_commit_to_row, buggy_pool, do_real_lat_ver=do_real_lat_ver)
-    
-    print("Training pool size = ", len(training_pool))
+      # Builds training queue and training pool based on latency verification and buggy commit detection.  
+      _ = prepare_train_data(df_train, training_pool, training_queue, map_commit_to_row, buggy_pool, do_real_lat_ver=do_real_lat_ver)
+      
+      print("Training pool size = ", len(training_pool))
 
-    if is_valid_training_data(training_pool):
-      #Train
-      try:
-        th, trained = train(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
-                            full_changes_test_file, project, model_path, training_pool, th=th, eval_metric=eval_metric, 
-                            do_oversample=do_oversample and (not skewed_oversample), do_undersample=do_undersample,
-                            pretrained_model=pretrained_model, trained=trained, skewed_oversample=skewed_oversample, seed=seed, 
-                            window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, batch_size=batch_size, 
-                            cross_project=cross_project, do_eval_with_all_negative=do_eval_with_all_negative)
-      except Exception as e:
-        print("Not enough labeled training/validation data.  Delaying training...")
-        print(f"Ocorreu um erro: {str(e)}")
-        traceback.print_exc()
+      if is_valid_training_data(training_pool):
+        #Train
+        try:
+          th, trained = train(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
+                              full_changes_test_file, project, model_path, training_pool, th=th, eval_metric=eval_metric, 
+                              do_oversample=do_oversample and (not skewed_oversample), do_undersample=do_undersample,
+                              pretrained_model=pretrained_model, trained=trained, skewed_oversample=skewed_oversample, seed=seed, 
+                              window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, batch_size=batch_size, 
+                              cross_project=cross_project, do_eval_with_all_negative=do_eval_with_all_negative)
+        except Exception as e:
+          print("Not enough labeled training/validation data.  Delaying training...")
+          print(f"Ocorreu um erro: {str(e)}")
+          traceback.print_exc()
 
-    #Test with current model (or no model)
-    calculate_metrics = df_test['is_buggy_commit'].sum() > 0
+      #Test with current model (or no model)
+      calculate_metrics = df_test['is_buggy_commit'].sum() > 0
 
-    if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
-      if adjust_th_on_test:
-        print("Calculating new th...")
-        _, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
-                              full_changes_test_file, project, df_test[-window_size:], model_path, th=th, 
-                              pretrained_model=pretrained_model, calculate_metrics=calculate_metrics, 
-                              eval_metric=eval_metric, batch_size=batch_size)
-        th = calculate_th_from_test(predictions, target_th=target_th)
+      if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
+        if adjust_th_on_test:
+          print("Calculating new th...")
+          _, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
+                                full_changes_test_file, project, df_test[-window_size:], model_path, th=th, 
+                                pretrained_model=pretrained_model, calculate_metrics=calculate_metrics, 
+                                eval_metric=eval_metric, batch_size=batch_size)
+          th = calculate_th_from_test(predictions, target_th=target_th)
 
-      results, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
-                                  full_changes_test_file, project, df_test, model_path, th=th, 
-                                  pretrained_model=pretrained_model, calculate_metrics=calculate_metrics,
-                                  eval_metric=eval_metric, batch_size=batch_size)
-      list_of_results.append(results)
-    else:
-      #file_to_monitor = f'{model_path}/model.bin'
-      print(f"No trained model found on {model_path}/checkpoint-best-{eval_metric}/model.bin")
-      print(f"{model_path}/checkpoint-best-{eval_metric}/model.bin")
-      print("df_test.shape[0] = ", df_test.shape[0])
-      pred_label = [0] * df_test.shape[0]
-      pred_prob = [0] * df_test.shape[0]
-      true_label = df_test['is_buggy_commit'].to_list()
-      predictions = {'pred_label': pred_label, 'true_label': true_label,
-                     'pred_prob':pred_prob}
+        results, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
+                                    full_changes_test_file, project, df_test, model_path, th=th, 
+                                    pretrained_model=pretrained_model, calculate_metrics=calculate_metrics,
+                                    eval_metric=eval_metric, batch_size=batch_size)
+        list_of_results.append(results)
+      else:
+        #file_to_monitor = f'{model_path}/model.bin'
+        print(f"No trained model found on {model_path}/checkpoint-best-{eval_metric}/model.bin")
+        print(f"{model_path}/checkpoint-best-{eval_metric}/model.bin")
+        print("df_test.shape[0] = ", df_test.shape[0])
+        pred_label = [0] * df_test.shape[0]
+        pred_prob = [0] * df_test.shape[0]
+        true_label = df_test['is_buggy_commit'].to_list()
+        predictions = {'pred_label': pred_label, 'true_label': true_label,
+                      'pred_prob':pred_prob}
 
-    list_of_predictions.append(predictions)
+      list_of_predictions.append(predictions)
+    except:
+      print("Error during trainig/testing.  Saving intermediate results and aborting processing...")
+      return save_execution_status(model_path, current, step, list_of_predictions, list_of_results)
 
     if time() > execution_start + max_exec_time:
       #pauses execution
       print("Maximum execution time reached.  Saving current state...")
+      return save_execution_status(model_path, current, step, list_of_predictions, list_of_results)
+    """
       with open(os.path.join(model_path, "training_status.pickle"), "wb") as f:
         pickle.dump({"current":current + step, "list_of_predictions":list_of_predictions}, f)
       return list_of_results, list_of_predictions, False
+      """
 
   print("Final training pool size = ", len(training_pool))
 
