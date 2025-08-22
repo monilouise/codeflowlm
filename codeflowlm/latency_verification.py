@@ -71,6 +71,12 @@ def do_real_latency_verification(row, training_pool, training_queue,
   #é anterior à data do commit atual
   for example in training_queue:
     example_row = map_commit_to_row[example[0]]
+    
+    if 'first_fix_date' not in example_row.columns:
+      print(f"Example {example[0]} does not have 'first_fix_date' column!!!!!!!!!")
+      print(example_row.shape)
+      continue
+    
     if example_row['first_fix_date'] != 0 and example_row['first_fix_date'] < row['author_date_unix_timestamp']:
       print(f"Current date: {row['author_date']}.  Promoting example from {example_row['project']} fixed on {datetime.fromtimestamp(example_row['first_fix_date'])} to training pool.")
       #volta o label para 1
