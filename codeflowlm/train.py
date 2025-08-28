@@ -419,9 +419,10 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
       else:
         df_train = df_project[max(current - step, 0):current].copy() #only recent data
 
-      df_train.to_csv(f'df_train_{current}.csv')
+      project = df_project['project'].iloc[current]
+      df_train.to_csv(f'df_train_{project}_{current}.csv')
       df_test = df_project[current:min(current + step, end)].copy()
-      df_test.to_csv(f'df_test_{current}.csv')
+      df_test.to_csv(f'df_test_{project}_{current}.csv')
 
       df_train, max_timestamp_for_cp = adjust_train_data(project, df_features_full, cross_project, df_train, 
                                                         initial_cp_timestamp=max_timestamp_for_cp, current_timestamp=current_timestamp)
