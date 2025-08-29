@@ -356,9 +356,9 @@ def merge_cross_project_data(df_features_full, df_train, project, initial_cp_tim
   
   return df_train, max_timestamp
 
-def save_execution_status(model_path, current, step, list_of_predictions, list_of_results):
+def save_execution_status(model_path, current, step, list_of_predictions, list_of_results, max_timestamp_for_cp):
   with open(os.path.join(model_path, "training_status.pickle"), "wb") as f:
-        pickle.dump({"current":current + step, "list_of_predictions":list_of_predictions}, f)
+        pickle.dump({"current":current + step, "list_of_predictions":list_of_predictions, "max_timestamp_for_cp": max_timestamp_for_cp}, f)
   return list_of_results, list_of_predictions, False
 
 
@@ -384,6 +384,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   trained = 0
 
   start = 0
+  max_timestamp_for_cp = 0
 
   if os.path.exists(os.path.join(model_path, "training_status.pickle")):
     with open(os.path.join(model_path, "training_status.pickle"), "rb") as f:
@@ -393,6 +394,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
         print("Resuming from current = ", start)
         list_of_predictions = training_status.get('list_of_predictions', [])
         print("Resuming with list_of_predictions of size = ", len(list_of_predictions))
+        max_timestamp_for_cp = training_status.get('max_timestamp_for_cp', 0)
       else:
         print("Starting from scratch.")
 
@@ -401,8 +403,8 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   
   check_df_project_sorted(df_project)
   execution_start = time()
-  max_exec_time = 20 * 60 * 60 #20 hours
-  max_timestamp_for_cp = 0
+  #max_exec_time = 20 * 60 * 60 #20 hours
+  max_exec_time = 40 * 60 * 60 #40 hours
 
   print(df_project.head())
 
@@ -476,13 +478,13 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
 
       list_of_predictions.append(predictions)
     except:
-      print("Error during trainig/testing.  Saving intermediate results and aborting processing...")
-      return save_execution_status(model_path, current, step, list_of_predictions, list_of_results)
+      print("Error during training/testing.  Saving intermediate results and aborting processing...")
+      return save_execution_status(model_path, current, step, list_of_predictions, list_of_results, max_timestamp_for_cp)
 
     if time() > execution_start + max_exec_time:
       #pauses execution
-      print("Maximum execution time reached.  Saving current state...")
-      return save_execution_status(model_path, current, step, list_of_predictions, list_of_results)
+      print("Maximum execution time reached.  Saving current state...") 
+      return save_execution_status(model_path, current, step, list_of_predictions, list_of_results, max_timestamp_for_cp)
     """
       with open(os.path.join(model_path, "training_status.pickle"), "wb") as f:
         pickle.dump({"current":current + step, "list_of_predictions":list_of_predictions}, f)
