@@ -223,26 +223,6 @@ def add_to_cumulative_training_pool(row, global_training_pool):
 
   global_training_pool.append(row)
 
-""""
-PreT:
-
-pretrained_model="unixcoder"
-method="prefix"     # prefix, prompt
-structure="concat"     # single, concat
-
-!python run_peft.py \
-    --pretrained_model {pretrained_model} \
-    --method {method} \
-    --structure {structure} \
-    --train_data_file {path}/changes_train_lst.pkl {path}/features_train.pkl \
-    --eval_data_file {path}/changes_valid_lst.pkl {path}/features_valid.pkl \
-    --test_data_file {path}/changes_test_lst.pkl {path}/features_test.pkl \
-    --output_dir /content/drive/MyDrive/UFPE/Tese/PEFT4CC/unixcoder/prefix/concat/checkpoints_50_2e-2_det_data \
-    --learning_rate 2e-2 \
-    --epochs 10 \
-    --do_train
-"""
-
 def train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, model_path, 
           training_pool, use_only_new_data=True, th=0.5, eval_metric="f1", do_oversample=False, do_undersample=False, 
           pretrained_model='codet5p-770m', trained=0, skewed_oversample=False, peft_alg="pret", seed=33, window_size=100, 
