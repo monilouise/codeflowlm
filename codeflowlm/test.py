@@ -19,7 +19,7 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
                                batch_size)
     command += "--use_lora "
   else:
-    command = get_pret_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size)
+    command = get_pret_command(batch_classifier_dir, path, project, model_path, th, eval_metric, batch_size)
 
   if pretrained_model == 'codet5p-770m':
     command += "--hidden_size 1024 "
@@ -44,10 +44,10 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
 
   return results, predictions
 
-def get_pret_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size):
+def get_pret_command(batch_classifier_dir, path, project, model_path, th, eval_metric, batch_size):
     return f"""
   python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
-    --pretrained_model {pretrained_model} \
+    --pretrained_model unixcoders \
     --method prefix \
     --structure concat \
     --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
