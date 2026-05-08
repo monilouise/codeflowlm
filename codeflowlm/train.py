@@ -245,7 +245,7 @@ structure="concat"     # single, concat
 
 def train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, model_path, 
           training_pool, use_only_new_data=True, th=0.5, eval_metric="f1", do_oversample=False, do_undersample=False, 
-          pretrained_model='codet5p-770m', trained=0, skewed_oversample=False, peft_alg="lora", seed=33, window_size=100, 
+          pretrained_model='codet5p-770m', trained=0, skewed_oversample=False, peft_alg="pret", seed=33, window_size=100, 
           target_th=0.5, l0=10, l1=12, m=1.5, batch_size=16, cross_project=False, do_eval_with_all_negative=False):
 
   if os.path.exists(os.path.join(model_path, "training_status.txt")):
