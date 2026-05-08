@@ -13,19 +13,13 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
     pickle.dump(features_test, f)
 
   print(f"Testing with recent data with th = {th}...")
-  command = f"""
-  python {batch_classifier_dir}PEFT4CC/just-in-time/run_{peft_alg}.py \
-   --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
-   --output_dir {model_path} \
-   --pretrained_model {pretrained_model} \
-   --batch_size {batch_size} \
-   --do_test \
-   --threshold {th} \
-   --eval_metric {eval_metric} \
-   """
 
   if peft_alg == "lora":
+    command = get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, peft_alg, 
+                             eval_metric, batch_size)
     command += "--use_lora "
+  else:
+    command = get_pret_command(path, project, model_path, th, pretrained_model, eval_metric, batch_size)
 
   if pretrained_model == 'codet5p-770m':
     command += "--hidden_size 1024 "
@@ -49,3 +43,29 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
   os.remove("predictions.pkl")
 
   return results, predictions
+
+def get_pret_command(path, project, model_path, th, pretrained_model, eval_metric, batch_size):
+    return f"""
+  python run_peft.py \
+    --pretrained_model {pretrained_model} \
+    --method prefix \
+    --structure concat \
+    --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
+    --output_dir {model_path} \
+    --batch_size {batch_size} \
+    --do_test \
+    --threshold {th} \
+    --eval_metric {eval_metric} \
+    """
+
+def get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, peft_alg, eval_metric, batch_size):
+    return f"""
+  python {batch_classifier_dir}PEFT4CC/just-in-time/run_{peft_alg}.py \
+   --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
+   --output_dir {model_path} \
+   --pretrained_model {pretrained_model} \
+   --batch_size {batch_size} \
+   --do_test \
+   --threshold {th} \
+   --eval_metric {eval_metric} \
+   """

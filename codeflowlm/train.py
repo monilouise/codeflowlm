@@ -223,6 +223,26 @@ def add_to_cumulative_training_pool(row, global_training_pool):
 
   global_training_pool.append(row)
 
+""""
+PreT:
+
+pretrained_model="unixcoder"
+method="prefix"     # prefix, prompt
+structure="concat"     # single, concat
+
+!python run_peft.py \
+    --pretrained_model {pretrained_model} \
+    --method {method} \
+    --structure {structure} \
+    --train_data_file {path}/changes_train_lst.pkl {path}/features_train.pkl \
+    --eval_data_file {path}/changes_valid_lst.pkl {path}/features_valid.pkl \
+    --test_data_file {path}/changes_test_lst.pkl {path}/features_test.pkl \
+    --output_dir /content/drive/MyDrive/UFPE/Tese/PEFT4CC/unixcoder/prefix/concat/checkpoints_50_2e-2_det_data \
+    --learning_rate 2e-2 \
+    --epochs 10 \
+    --do_train
+"""
+
 def train(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, model_path, 
           training_pool, use_only_new_data=True, th=0.5, eval_metric="f1", do_oversample=False, do_undersample=False, 
           pretrained_model='codet5p-770m', trained=0, skewed_oversample=False, peft_alg="lora", seed=33, window_size=100, 
@@ -253,25 +273,14 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
   if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
     action = "do_resume_training"
 
-  command = f"""
-  python {batch_classifier_dir}PEFT4CC/just-in-time/run_{peft_alg}.py \
-   --train_data_file {changes_train_file} {features_train_file} \
-   --eval_data_file {changes_valid_file} {features_valid_file} \
-   --output_dir {model_path} \
-   --pretrained_model {model_name} \
-   --learning_rate 1e-4 \
-   --epochs 10 \
-   --batch_size {batch_size} \
-   --{action} \
-   --threshold {th} \
-   --seed {seed} \
-   --window_size {window_size} \
-   --target_th {target_th} \
-   --l0 {l0} \
-   --l1 {l1} \
-   --m {m} \
-   --activation relu \
-   """
+  if peft_alg == "lora":
+    command = get_lora_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0,
+                                  l1, m, batch_size, changes_train_file, features_train_file, changes_valid_file, 
+                                  features_valid_file, model_name, action)
+  else:
+    command = get_pret_command(batch_classifier_dir, model_path, th, pretrained_model, seed, window_size, 
+                                  target_th, l0, l1, m, batch_size, changes_train_file, features_train_file, 
+                                  changes_valid_file, features_valid_file, action)
 
   if eval_metric == "gmean":
     command += """--eval_metric gmean """
@@ -320,6 +329,54 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
         print(f"Model file has not changed.  Keeping training data.")
 
   return th, trained
+
+def get_pret_command(batch_classifier_dir, model_path, th, pretrained_model, seed, window_size, target_th, l0, l1, 
+                     m, batch_size, changes_train_file, features_train_file, changes_valid_file, 
+                     features_valid_file, action):
+    return f"""
+  python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
+    --pretrained_model {pretrained_model} \
+    --method prefix \
+    --structure concat \
+    --train_data_file {changes_train_file} {features_train_file} \
+    --eval_data_file {changes_valid_file} {features_valid_file} \
+    --output_dir {model_path} \
+    --learning_rate 2e-2 \
+    --epochs 10 \
+    --batch_size {batch_size} \
+    --{action} \
+    --threshold {th} \
+    --seed {seed} \
+    --window_size {window_size} \
+    --target_th {target_th} \
+    --l0 {l0} \
+    --l1 {l1} \
+    --m {m} \
+    --activation relu \
+  """
+
+def get_lora_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, m, batch_size, 
+                     changes_train_file, features_train_file, changes_valid_file, features_valid_file, model_name, 
+                     action):
+    return f"""
+  python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
+   --train_data_file {changes_train_file} {features_train_file} \
+   --eval_data_file {changes_valid_file} {features_valid_file} \
+   --output_dir {model_path} \
+   --pretrained_model {model_name} \
+   --learning_rate 1e-4 \
+   --epochs 10 \
+   --batch_size {batch_size} \
+   --{action} \
+   --threshold {th} \
+   --seed {seed} \
+   --window_size {window_size} \
+   --target_th {target_th} \
+   --l0 {l0} \
+   --l1 {l1} \
+   --m {m} \
+   --activation relu \
+   """
 
 def check_df_project_sorted(df_project):
     if 'author_date_unix_timestamp' not in df_project.columns:
