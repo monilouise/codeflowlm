@@ -260,7 +260,7 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
   else:
     command = get_pret_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, m, 
                                batch_size, changes_train_file, features_train_file, changes_valid_file, 
-                               features_valid_file, action)
+                               features_valid_file, model_name, action)
 
   if eval_metric == "gmean":
     command += """--eval_metric gmean """
@@ -312,10 +312,10 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
 
 def get_pret_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, 
                      m, batch_size, changes_train_file, features_train_file, changes_valid_file, 
-                     features_valid_file, action):
+                     features_valid_file, model_name, action):
     return f"""
   python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
-    --pretrained_model unixcoder \
+    --pretrained_model {model_name} \
     --method prefix \
     --structure concat \
     --train_data_file {changes_train_file} {features_train_file} \
