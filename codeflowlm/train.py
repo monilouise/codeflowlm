@@ -12,7 +12,6 @@ from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
 from codeflowlm.test import test
 from codeflowlm.threshold import calculate_th_from_test
-from time import time
 
 projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'commons-codec','commons-collections',
@@ -440,7 +439,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   end = df_project.shape[0]
   
   check_df_project_sorted(df_project)
-  execution_start = time()
+  execution_start = time.time()
   #max_exec_time = 20 * 60 * 60 #20 hours
   max_exec_time = 40 * 60 * 60 #40 hours
 
@@ -519,7 +518,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
       print("Error during training/testing.  Saving intermediate results and aborting processing...")
       return save_execution_status(model_path, current, step, list_of_predictions, list_of_results, max_timestamp_for_cp)
 
-    if time() > execution_start + max_exec_time:
+    if time.time() > execution_start + max_exec_time:
       #pauses execution
       print("Maximum execution time reached.  Saving current state...") 
       return save_execution_status(model_path, current, step, list_of_predictions, list_of_results, max_timestamp_for_cp)
