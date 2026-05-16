@@ -423,6 +423,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   start = 0
   max_timestamp_for_cp = 0
 
+  print("model_path = ", model_path)
   if os.path.exists(os.path.join(model_path, "training_status.pickle")):
     with open(os.path.join(model_path, "training_status.pickle"), "rb") as f:
       training_status = pickle.load(f)
