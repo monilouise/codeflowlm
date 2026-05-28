@@ -254,7 +254,7 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
     action = "do_resume_training"
 
   print(f"Using PEFT algorithm {peft_alg} for training.")
-  
+
   if peft_alg == "lora":
     command = get_lora_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, m, 
                                batch_size, changes_train_file, features_train_file, changes_valid_file, 
@@ -651,9 +651,10 @@ def adjust_df_features_full(commit_guru_path, cross_project, df_features_full):
 def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_guru_path, full_features_train_file, full_features_valid_file, full_features_test_file, 
                                full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, 
                                early_stop_metric="gmean", adjust_th=False, do_oversample=True, skewed_oversample=False, 
-                               adjust_th_on_test=False, seed=33, decay_factor=0.99, window_size=100, target_th=0.5, l0=10, l1=12 , 
-                               m=1.5, results_folder='', start=0, end=None, pretrained_model="codet5p-770m", train_from_scratch=True, 
-                               batch_size=16, cross_project=False, do_eval_with_all_negative=False):
+                               peft_alg="lora", adjust_th_on_test=False, seed=33, decay_factor=0.99, window_size=100, 
+                               target_th=0.5, l0=10, l1=12, m=1.5, results_folder='', start=0, end=None, 
+                               pretrained_model="codet5p-770m", train_from_scratch=True, 
+batch_size=16, cross_project=False, do_eval_with_all_negative=False):
 
     columns = ['project', 'g_mean', 'f1', 'precision', 'recall', 'R0', 'R1',
              '|R0-R1|', 'std_g_mean', 'std_f1', 'std_precision', 'std_recall',
@@ -663,12 +664,14 @@ def train_project_with_lat_ver(batch_classifier_dir, path, model_root, commit_gu
     df = pd.DataFrame(columns=columns)
 
     _, predictions, model_path, finished = train_project(batch_classifier_dir, path, model_root, commit_guru_path, 
-                                                         full_features_train_file, full_features_valid_file, full_features_test_file, 
-                                                         full_changes_train_file, full_changed_valid_file, full_changes_test_file, 
-                                                         project, early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
+                                                         full_features_train_file, full_features_valid_file, 
+                                                         full_features_test_file, full_changes_train_file, 
+                                                         full_changed_valid_file, full_changes_test_file, project, 
+                                                         early_stop_metric=early_stop_metric, do_real_lat_ver=True, 
                                                          adjust_th=adjust_th, do_oversample=do_oversample, 
-                                                         skewed_oversample=skewed_oversample, adjust_th_on_test=adjust_th_on_test, 
-                                                         seed=seed, window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, 
+                                                         skewed_oversample=skewed_oversample, peft_alg=peft_alg, 
+                                                         adjust_th_on_test=adjust_th_on_test, seed=seed, 
+                                                         window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, 
                                                          start=start, end=end, pretrained_model=pretrained_model, 
                                                          train_from_scratch=train_from_scratch, batch_size=batch_size, 
                                                          cross_project=cross_project, 
