@@ -14,6 +14,8 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
 
   print(f"Testing with recent data with th = {th}...")
 
+  print("PEFT algorithm: ", peft_alg)
+  
   if peft_alg == "lora":
     command = get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, 
                                batch_size)
