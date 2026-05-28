@@ -253,6 +253,8 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
   if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
     action = "do_resume_training"
 
+  print(f"Using PEFT algorithm {peft_alg} for training.")
+  
   if peft_alg == "lora":
     command = get_lora_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, m, 
                                batch_size, changes_train_file, features_train_file, changes_valid_file, 
@@ -403,11 +405,10 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                                 full_changes_test_file, project, df_project, model_path, training_pool, training_queue, 
                                 map_commit_to_row, buggy_pool=[], training_examples=50, th=0.5, adjust_th=False,
                                 eval_metric="f1", do_oversample=False, do_undersample=False, 
-                                pretrained_model='codet5p-770m', do_real_lat_ver=False, skewed_oversample=False,
-                                adjust_th_on_test=False, seed=33, window_size=100, target_th=0.5, l0=10, l1=12,
-                                m=1.5, train_from_scratch=True, batch_size=16, df_features_full=None, cross_project=False, 
-                                do_eval_with_all_negative=False):
-  list_of_results = []
+                                pretrained_model='codet5p-770m', do_real_lat_ver=False, skewed_oversample=False, 
+                                peft_alg="lora", adjust_th_on_test=False, seed=33, window_size=100, target_th=0.5, l0=10, 
+                                l1=12, m=1.5, train_from_scratch=True, batch_size=16, df_features_full=None, 
+                                cross_project=False, do_eval_with_all_negative=False):
   list_of_predictions = []
 
   print('len(training_pool) = ', len(training_pool))
@@ -478,9 +479,10 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
           th, trained = train(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                               full_changes_test_file, project, model_path, training_pool, th=th, eval_metric=eval_metric, 
                               do_oversample=do_oversample and (not skewed_oversample), do_undersample=do_undersample,
-                              pretrained_model=pretrained_model, trained=trained, skewed_oversample=skewed_oversample, seed=seed, 
-                              window_size=window_size, target_th=target_th, l0=l0, l1=l1, m=m, batch_size=batch_size, 
-                              cross_project=cross_project, do_eval_with_all_negative=do_eval_with_all_negative)
+                              pretrained_model=pretrained_model, trained=trained, skewed_oversample=skewed_oversample, 
+                              peft_alg=peft_alg, seed=seed, window_size=window_size, target_th=target_th, l0=l0, l1=l1, 
+                              m=m, batch_size=batch_size, cross_project=cross_project, 
+                              do_eval_with_all_negative=do_eval_with_all_negative)
         except Exception as e:
           print("Not enough labeled training/validation data.  Delaying training...")
           print(f"Ocorreu um erro: {str(e)}")
@@ -543,10 +545,11 @@ def adjust_train_data(project, df_features_full, cross_project, df_train, initia
 def train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, full_changes_train_file, 
                                                 full_changes_valid_file, full_changes_test_file, project, df_project, 
                                                 model_path, early_stop_metric='f1', do_real_lat_ver=False, 
-                                                adjust_th=False, do_oversample=True, skewed_oversample=False,
-                                                adjust_th_on_test=False, seed=33, window_size=100, target_th=0.5, l0=10, l1=12,
-                                                m=1.5, pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16, 
-                                                df_features_full=None, cross_project=False, do_eval_with_all_negative=False):
+                                                adjust_th=False, do_oversample=True, skewed_oversample=False, 
+                                                peft_alg="lora", adjust_th_on_test=False, seed=33, window_size=100, 
+                                                target_th=0.5, l0=10, l1=12, m=1.5, pretrained_model="codet5p-770m", 
+                                                train_from_scratch=True, batch_size=16, df_features_full=None, 
+                                                cross_project=False, do_eval_with_all_negative=False):
   batches = []
   training_pool = []
   training_queue = []
@@ -558,16 +561,18 @@ def train_on_line_with_new_data_with_early_stop(batch_classifier_dir, path, full
                                      full_changes_test_file, project, df_project, model_path, training_pool, 
                                      training_queue, map_commit_to_row, buggy_pool, eval_metric=early_stop_metric,
                                      do_oversample=do_oversample, do_real_lat_ver=do_real_lat_ver, adjust_th=adjust_th, 
-                                     skewed_oversample=skewed_oversample, adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size,
+                                     skewed_oversample=skewed_oversample, peft_alg=peft_alg, 
+                                     adjust_th_on_test=adjust_th_on_test, seed=seed, window_size=window_size, 
                                      target_th=target_th, l0=l0, l1=l1, m=m, pretrained_model=pretrained_model,
-                                     train_from_scratch=train_from_scratch, batch_size=batch_size, df_features_full=df_features_full, 
-                                     cross_project=cross_project, do_eval_with_all_negative=do_eval_with_all_negative)
+                                     train_from_scratch=train_from_scratch, batch_size=batch_size, 
+                                     df_features_full=df_features_full, cross_project=cross_project, 
+                                     do_eval_with_all_negative=do_eval_with_all_negative)
 
 def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full_features_train_file, 
                   full_features_valid_file, full_features_test_file, full_changes_train_file, full_changed_valid_file, 
                   full_changes_test_file, project, early_stop_metric="gmean", do_real_lat_ver=False, adjust_th=False, 
-                  do_oversample=True, model_path=None, skewed_oversample=False, adjust_th_on_test=False, seed=33, 
-                  window_size=100, target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, 
+                  do_oversample=True, model_path=None, skewed_oversample=False, peft_alg="lora", adjust_th_on_test=False, 
+                  seed=33, window_size=100, target_th=0.5, l0=10, l1=12 , m=1.5, start=0, end=None, 
                   pretrained_model="codet5p-770m", train_from_scratch=True, batch_size=16, cross_project=False, 
                   do_eval_with_all_negative=False):
   
@@ -601,6 +606,7 @@ def train_project(batch_classifier_dir, path, model_root, commit_guru_path, full
                                                                              adjust_th=adjust_th, 
                                                                              do_oversample=do_oversample, 
                                                                              skewed_oversample=skewed_oversample, 
+                                                                             peft_alg=peft_alg,
                                                                              adjust_th_on_test=adjust_th_on_test, 
                                                                              seed=seed, window_size=window_size, 
                                                                              target_th=target_th, l0=l0, l1=l1, m=m, 
