@@ -442,9 +442,8 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
   
   check_df_project_sorted(df_project)
   execution_start = time.time()
-  #max_exec_time = 20 * 60 * 60 #20 hours
-  max_exec_time = 40 * 60 * 60 #40 hours
-
+  max_exec_time = 20 * 60 * 60 #20 hours
+  
   print(df_project.head())
 
   for current in range(start, end, step):
