@@ -409,6 +409,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                                 peft_alg="lora", adjust_th_on_test=False, seed=33, window_size=100, target_th=0.5, l0=10, 
                                 l1=12, m=1.5, train_from_scratch=True, batch_size=16, df_features_full=None, 
                                 cross_project=False, do_eval_with_all_negative=False):
+  list_of_results = []
   list_of_predictions = []
 
   print('len(training_pool) = ', len(training_pool))
@@ -495,13 +496,13 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
           print("Calculating new th...")
           _, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                                 full_changes_test_file, project, df_test[-window_size:], model_path, th=th, 
-                                pretrained_model=pretrained_model, calculate_metrics=calculate_metrics, 
+                                pretrained_model=pretrained_model, calculate_metrics=calculate_metrics, peft_alg=peft_alg,
                                 eval_metric=eval_metric, batch_size=batch_size)
           th = calculate_th_from_test(predictions, target_th=target_th)
 
         results, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
                                     full_changes_test_file, project, df_test, model_path, th=th, 
-                                    pretrained_model=pretrained_model, calculate_metrics=calculate_metrics,
+                                    pretrained_model=pretrained_model, calculate_metrics=calculate_metrics, peft_alg=peft_alg,
                                     eval_metric=eval_metric, batch_size=batch_size)
         list_of_results.append(results)
       else:
