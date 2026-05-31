@@ -11,7 +11,6 @@ from codeflowlm.latency_verification import add_first_fix_date, do_latency_verif
 from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
 from codeflowlm.test import test
-from codeflowlm.threshold import calculate_th_from_test
 
 projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'commons-codec','commons-collections',
