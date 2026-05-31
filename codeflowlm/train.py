@@ -532,7 +532,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
 
       if os.path.exists(f"{model_path}/checkpoint-best-{eval_metric}/model.bin"):
         results, predictions = test(batch_classifier_dir, path, full_changes_train_file, full_changes_valid_file, 
-                                    full_changes_test_file, project, df_test, model_path, th=th, 
+                                    full_changes_test_file, project, df_test, model_path, th=th, adjust_th=adjust_th,
                                     pretrained_model=pretrained_model, calculate_metrics=calculate_metrics, peft_alg=peft_alg,
                                     eval_metric=eval_metric, batch_size=batch_size, stream_changes_file=stream_changes_file, stream_features_file=stream_features_file)
         list_of_results.append(results)
