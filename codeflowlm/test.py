@@ -29,6 +29,9 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
 
   if calculate_metrics:
     command += """--calculate_metrics """
+    
+  if adjust_th:
+    command += """--update_threshold """
 
   execute_command(command)
 
@@ -47,7 +50,7 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
 
   return results, predictions
 
-def get_pret_command(batch_classifier_dir, path, project, model_path, th,pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None, adjust_th=False):
+def get_pret_command(batch_classifier_dir, path, project, model_path, th,pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None):
     return f"""
   python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
     --pretrained_model {pretrained_model} \
@@ -59,11 +62,10 @@ def get_pret_command(batch_classifier_dir, path, project, model_path, th,pretrai
     --batch_size {batch_size} \
     --do_test \
     --threshold {th} \
-    --update_threshold {adjust_th} \
     --eval_metric {eval_metric} \
     """
 
-def get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None, adjust_th=False):
+def get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None):
     return f"""
   python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
    --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
@@ -73,6 +75,5 @@ def get_lora_command(batch_classifier_dir, path, project, model_path, th, pretra
    --batch_size {batch_size} \
    --do_test \
    --threshold {th} \
-   --update_threshold {adjust_th} \
    --eval_metric {eval_metric} \
    """
