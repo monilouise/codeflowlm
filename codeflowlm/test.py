@@ -18,12 +18,11 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
   
   if peft_alg == "lora":
     command = get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, 
-                               batch_size, stream_changes_file=stream_changes_file, stream_features_file=stream_features_file, adjust_th=adjust_th)
+                               batch_size, stream_changes_file=stream_changes_file, stream_features_file=stream_features_file)
     command += "--use_lora "
   else:
     command = get_pret_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size, 
-                               stream_changes_file=stream_changes_file, stream_features_file=stream_features_file, adjust_th=adjust_th)
-
+                               stream_changes_file=stream_changes_file, stream_features_file=stream_features_file)
   if pretrained_model == 'codet5p-770m':
     command += "--hidden_size 1024 "
 

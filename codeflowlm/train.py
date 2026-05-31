@@ -548,7 +548,11 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
                       'pred_prob':pred_prob}
 
       list_of_predictions.append(predictions)
-    except:
+    except Exception as e:
+      print(f"Erro: {e}")           # mensagem
+      print(repr(e))                # tipo + mensagem
+      import traceback
+      traceback.print_exc()         # stack trace completo
       print("Error during training/testing.  Saving intermediate results and aborting processing...")
       return save_execution_status(model_path, current, step, list_of_predictions, list_of_results, max_timestamp_for_cp)
 
