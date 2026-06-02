@@ -354,8 +354,7 @@ def get_pret_command(batch_classifier_dir, model_path, th, seed, window_size, ta
     --method prefix \
     --structure concat \
     --train_data_file {changes_train_file} {features_train_file} \
-    --eval_data_file {changes_valid_file} {features_valid_file} 
-    """
+    --eval_data_file {changes_valid_file} {features_valid_file} """
 
     if stream_changes_file is not None and stream_features_file is not None:
         result += f"""--stream_data_file {stream_changes_file} {stream_features_file} """
@@ -384,8 +383,7 @@ def get_lora_command(batch_classifier_dir, model_path, th, seed, window_size, ta
     result = f"""
     python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
     --train_data_file {changes_train_file} {features_train_file} \
-    --eval_data_file {changes_valid_file} {features_valid_file} 
-    """
+    --eval_data_file {changes_valid_file} {features_valid_file} """
 
     if stream_changes_file is not None and stream_features_file is not None:
         result += f"""--stream_data_file {stream_changes_file} {stream_features_file} """
