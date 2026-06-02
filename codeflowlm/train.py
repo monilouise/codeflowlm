@@ -13,7 +13,7 @@ from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
 from codeflowlm.test import test
 
-USE_FULL_STREAM_FOR_TRAINING = False
+USE_FULL_STREAM_FOR_TRAINING = True
 
 projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'commons-codec','commons-collections',
