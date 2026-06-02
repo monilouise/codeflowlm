@@ -55,13 +55,11 @@ def get_pret_command(batch_classifier_dir, path, project, model_path, th,pretrai
     --pretrained_model {pretrained_model} \
     --method prefix \
     --structure concat \
-    --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
+    --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl 
     """
 
     if stream_changes_file is not None and stream_features_file is not None:
-        result += f"""
-        --stream_data_file {stream_changes_file} {stream_features_file} \  
-        """
+        result += f"""--stream_data_file {stream_changes_file} {stream_features_file} """
     
     result += f"""
     --output_dir {model_path} \
@@ -75,13 +73,11 @@ def get_pret_command(batch_classifier_dir, path, project, model_path, th,pretrai
 def get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None):
     result = f"""
   python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
-   --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
+   --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl 
    """
     
     if stream_changes_file is not None and stream_features_file is not None:
-        result += f"""
-        --stream_data_file {stream_changes_file} {stream_features_file} \  
-        """
+        result += f"""--stream_data_file {stream_changes_file} {stream_features_file} """
 
     result += f"""
     --output_dir {model_path} \
