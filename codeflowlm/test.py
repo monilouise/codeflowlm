@@ -50,29 +50,42 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
   return results, predictions
 
 def get_pret_command(batch_classifier_dir, path, project, model_path, th,pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None):
-    return f"""
+    result = f"""
   python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
     --pretrained_model {pretrained_model} \
     --method prefix \
     --structure concat \
     --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
-    --stream_data_file {stream_changes_file} {stream_features_file} \  
+    """
+
+    if stream_changes_file is not None and stream_features_file is not None:
+        result += f"--stream_data_file {stream_changes_file} {stream_features_file} \  "
+    
+    result += f"""
     --output_dir {model_path} \
     --batch_size {batch_size} \
     --do_test \
     --threshold {th} \
     --eval_metric {eval_metric} \
     """
+    return result
 
 def get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None):
-    return f"""
+    result = f"""
   python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
    --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl \
-   --stream_data_file {stream_changes_file} {stream_features_file} \
-   --output_dir {model_path} \
-   --pretrained_model {pretrained_model} \
-   --batch_size {batch_size} \
-   --do_test \
-   --threshold {th} \
-   --eval_metric {eval_metric} \
    """
+    
+    if stream_changes_file is not None and stream_features_file is not None:
+        result += f"--stream_data_file {stream_changes_file} {stream_features_file} \  "
+
+    result += f"""
+    --output_dir {model_path} \
+    --pretrained_model {pretrained_model} \
+    --batch_size {batch_size} \
+    --do_test \
+    --threshold {th} \
+    --eval_metric {eval_metric} \
+    """
+
+    return result

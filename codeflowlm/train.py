@@ -12,6 +12,8 @@ from codeflowlm.prequential_metrics import calculate_prequential_mean_and_std
 from codeflowlm.plots import plot
 from codeflowlm.test import test
 
+USE_FULL_STREAM_FOR_TRAINING = False
+
 projects_with_real_lat_ver = ['ant-ivy','commons-bcel','commons-beanutils',
                                 'commons-codec','commons-collections',
                                 'commons-compress','commons-configuration',
@@ -346,14 +348,19 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
 def get_pret_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, 
                      m, batch_size, changes_train_file, features_train_file, changes_valid_file, 
                      features_valid_file, model_name, action, stream_changes_file, stream_features_file):
-    return f"""
-  python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
+    result = f"""
+    python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
     --pretrained_model {model_name} \
     --method prefix \
     --structure concat \
     --train_data_file {changes_train_file} {features_train_file} \
     --eval_data_file {changes_valid_file} {features_valid_file} \
-    --stream_data_file {stream_changes_file} {stream_features_file} \  
+    """
+
+    if stream_changes_file is not None and stream_features_file is not None:
+        result += f"--stream_data_file {stream_changes_file} {stream_features_file} \  "
+
+    result += f"""
     --output_dir {model_path} \
     --learning_rate 2e-2 \
     --epochs 10 \
@@ -367,31 +374,40 @@ def get_pret_command(batch_classifier_dir, model_path, th, seed, window_size, ta
     --l1 {l1} \
     --m {m} \
     --activation relu \
-  """
+    """
+    
+    return result
 
 def get_lora_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, m, batch_size, 
                      changes_train_file, features_train_file, changes_valid_file, features_valid_file, model_name, 
                      action, stream_changes_file, stream_features_file):
-    return f"""
-  python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
-   --train_data_file {changes_train_file} {features_train_file} \
-   --eval_data_file {changes_valid_file} {features_valid_file} \
-   --stream_data_file {stream_changes_file} {stream_features_file} \
-   --output_dir {model_path} \
-   --pretrained_model {model_name} \
-   --learning_rate 1e-4 \
-   --epochs 10 \
-   --batch_size {batch_size} \
-   --{action} \
-   --threshold {th} \
-   --seed {seed} \
-   --window_size {window_size} \
-   --target_th {target_th} \
-   --l0 {l0} \
-   --l1 {l1} \
-   --m {m} \
-   --activation relu \
-   """
+    result = f"""
+    python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
+    --train_data_file {changes_train_file} {features_train_file} \
+    --eval_data_file {changes_valid_file} {features_valid_file} \
+    """
+
+    if stream_changes_file is not None and stream_features_file is not None:
+        result += f"--stream_data_file {stream_changes_file} {stream_features_file} \  "
+    
+    result += f"""
+    --output_dir {model_path} \
+    --pretrained_model {model_name} \
+    --learning_rate 1e-4 \
+    --epochs 10 \
+    --batch_size {batch_size} \
+    --{action} \
+    --threshold {th} \
+    --seed {seed} \
+    --window_size {window_size} \
+    --target_th {target_th} \
+    --l0 {l0} \
+    --l1 {l1} \
+    --m {m} \
+    --activation relu \
+    """
+
+    return result
 
 def check_df_project_sorted(df_project):
     if 'author_date_unix_timestamp' not in df_project.columns:
@@ -508,7 +524,7 @@ def train_on_line_with_new_data(batch_classifier_dir, path, full_changes_train_f
       df_stream=df_train
       stream_changes_file, stream_features_file = None, None
   
-      if df_stream is not None:
+      if df_stream is not None and USE_FULL_STREAM_FOR_TRAINING:
         stream_changes_file, stream_features_file = prepare_full_stream_data(project, df_stream, full_changes_train_file, full_changes_valid_file, 
                                                                          full_changes_test_file)
 
