@@ -358,7 +358,9 @@ def get_pret_command(batch_classifier_dir, model_path, th, seed, window_size, ta
     """
 
     if stream_changes_file is not None and stream_features_file is not None:
-        result += f"--stream_data_file {stream_changes_file} {stream_features_file} \  "
+        result += f"""
+        --stream_data_file {stream_changes_file} {stream_features_file} \  
+        """
 
     result += f"""
     --output_dir {model_path} \
@@ -388,7 +390,9 @@ def get_lora_command(batch_classifier_dir, model_path, th, seed, window_size, ta
     """
 
     if stream_changes_file is not None and stream_features_file is not None:
-        result += f"--stream_data_file {stream_changes_file} {stream_features_file} \  "
+        result += f"""
+        --stream_data_file {stream_changes_file} {stream_features_file} \  
+        """
     
     result += f"""
     --output_dir {model_path} \
