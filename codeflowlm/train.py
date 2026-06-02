@@ -1,6 +1,7 @@
 import pandas as pd
 import pickle
 import os
+import shlex
 from datetime import datetime
 import time
 import traceback
@@ -298,24 +299,24 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
                                features_valid_file, model_name, action, stream_changes_file, stream_features_file)
 
   if eval_metric == "gmean":
-    command += """--eval_metric gmean """
+    command += " --eval_metric gmean"
 
   if do_oversample:
-    command += """--oversample """
+    command += " --oversample"
   elif skewed_oversample:
-    command += """--skewed_oversample """
+    command += " --skewed_oversample"
 
   if do_undersample:
-    command += """--undersample """
+    command += " --undersample"
 
   if pretrained_model == 'codet5p-770m':
-    command += """--hidden_size 1024 """
+    command += " --hidden_size 1024"
 
   if peft_alg == "lora":
-    command += """--use_lora """
+    command += " --use_lora"
     
   if cross_project:
-    command += """--cross_project """
+    command += " --cross_project"
 
   """
   try:
@@ -348,64 +349,72 @@ def train(batch_classifier_dir, path, full_changes_train_file, full_changed_vali
 def get_pret_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, 
                      m, batch_size, changes_train_file, features_train_file, changes_valid_file, 
                      features_valid_file, model_name, action, stream_changes_file, stream_features_file):
-    result = f"""
-    python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
-    --pretrained_model {model_name} \
-    --method prefix \
-    --structure concat \
-    --train_data_file {changes_train_file} {features_train_file} \
-    --eval_data_file {changes_valid_file} {features_valid_file} """
+  command = [
+    "python",
+    os.path.join(batch_classifier_dir, "PEFT4CC/just-in-time/run_peft.py"),
+    "--pretrained_model", str(model_name),
+    "--method", "prefix",
+    "--structure", "concat",
+    "--train_data_file", str(changes_train_file), str(features_train_file),
+    "--eval_data_file", str(changes_valid_file), str(features_valid_file),
+  ]
 
-    if stream_changes_file is not None and stream_features_file is not None:
-        result += f"""--stream_data_file {stream_changes_file} {stream_features_file} """
+  if stream_changes_file is not None and stream_features_file is not None:
+    command.extend([
+      "--stream_data_file", str(stream_changes_file), str(stream_features_file)
+    ])
 
-    result += f"""
-    --output_dir {model_path} \
-    --learning_rate 2e-2 \
-    --epochs 10 \
-    --batch_size {batch_size} \
-    --{action} \
-    --threshold {th} \
-    --seed {seed} \
-    --window_size {window_size} \
-    --target_th {target_th} \
-    --l0 {l0} \
-    --l1 {l1} \
-    --m {m} \
-    --activation relu \
-    """
-    
-    return result
+  command.extend([
+    "--output_dir", str(model_path),
+    "--learning_rate", "2e-2",
+    "--epochs", "10",
+    "--batch_size", str(batch_size),
+    f"--{action}",
+    "--threshold", str(th),
+    "--seed", str(seed),
+    "--window_size", str(window_size),
+    "--target_th", str(target_th),
+    "--l0", str(l0),
+    "--l1", str(l1),
+    "--m", str(m),
+    "--activation", "relu",
+  ])
+
+  return shlex.join(command)
 
 def get_lora_command(batch_classifier_dir, model_path, th, seed, window_size, target_th, l0, l1, m, batch_size, 
                      changes_train_file, features_train_file, changes_valid_file, features_valid_file, model_name, 
                      action, stream_changes_file, stream_features_file):
-    result = f"""
-    python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
-    --train_data_file {changes_train_file} {features_train_file} \
-    --eval_data_file {changes_valid_file} {features_valid_file} """
+  command = [
+    "python",
+    os.path.join(batch_classifier_dir, "PEFT4CC/just-in-time/run_lora.py"),
+    "--train_data_file", str(changes_train_file), str(features_train_file),
+    "--eval_data_file", str(changes_valid_file), str(features_valid_file),
+  ]
 
-    if stream_changes_file is not None and stream_features_file is not None:
-        result += f"""--stream_data_file {stream_changes_file} {stream_features_file} """
+  if stream_changes_file is not None and stream_features_file is not None:
+    command.extend([
+      "--stream_data_file", str(stream_changes_file), str(stream_features_file)
+    ])
     
-    result += f"""
-    --output_dir {model_path} \
-    --pretrained_model {model_name} \
-    --learning_rate 1e-4 \
-    --epochs 10 \
-    --batch_size {batch_size} \
-    --{action} \
-    --threshold {th} \
-    --seed {seed} \
-    --window_size {window_size} \
-    --target_th {target_th} \
-    --l0 {l0} \
-    --l1 {l1} \
-    --m {m} \
-    --activation relu \
-    """
+  command.extend([
+    "--output_dir", str(model_path),
+    "--pretrained_model", str(model_name),
+    "--learning_rate", "1e-4",
+    "--epochs", "10",
+    "--batch_size", str(batch_size),
+    f"--{action}",
+    "--threshold", str(th),
+    "--seed", str(seed),
+    "--window_size", str(window_size),
+    "--target_th", str(target_th),
+    "--l0", str(l0),
+    "--l1", str(l1),
+    "--m", str(m),
+    "--activation", "relu",
+  ])
 
-    return result
+  return shlex.join(command)
 
 def check_df_project_sorted(df_project):
     if 'author_date_unix_timestamp' not in df_project.columns:

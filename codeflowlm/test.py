@@ -2,6 +2,7 @@ from codeflowlm.data import get_changes_from_features
 from codeflowlm.train import execute_command
 import pickle
 import os
+import shlex
 
 def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid_file, full_changes_test_file, project, features_test, model_path, th, pretrained_model, 
          calculate_metrics=True, peft_alg="lora", eval_metric='f1', batch_size=16, stream_changes_file=None, stream_features_file=None, adjust_th=False):
@@ -19,18 +20,18 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
   if peft_alg == "lora":
     command = get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, 
                                batch_size, stream_changes_file=stream_changes_file, stream_features_file=stream_features_file)
-    command += "--use_lora "
+    command += " --use_lora"
   else:
     command = get_pret_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size, 
                                stream_changes_file=stream_changes_file, stream_features_file=stream_features_file)
   if pretrained_model == 'codet5p-770m':
-    command += "--hidden_size 1024 "
+    command += " --hidden_size 1024"
 
   if calculate_metrics:
-    command += """--calculate_metrics """
+    command += " --calculate_metrics"
     
   if adjust_th:
-    command += """--update_threshold """
+    command += " --update_threshold"
 
   execute_command(command)
 
@@ -50,40 +51,49 @@ def test(batch_classifier_dir, path, full_changes_train_file, full_changed_valid
   return results, predictions
 
 def get_pret_command(batch_classifier_dir, path, project, model_path, th,pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None):
-    result = f"""
-  python {batch_classifier_dir}PEFT4CC/just-in-time/run_peft.py \
-    --pretrained_model {pretrained_model} \
-    --method prefix \
-    --structure concat \
-    --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl """
+  command = [
+    "python",
+    os.path.join(batch_classifier_dir, "PEFT4CC/just-in-time/run_peft.py"),
+    "--pretrained_model", str(pretrained_model),
+    "--method", "prefix",
+    "--structure", "concat",
+    "--test_data_file", f"{path}/changes_test_online_{project}.pkl", f"{path}/features_test_online_{project}.pkl",
+  ]
 
-    if stream_changes_file is not None and stream_features_file is not None:
-        result += f"""--stream_data_file {stream_changes_file} {stream_features_file} """
+  if stream_changes_file is not None and stream_features_file is not None:
+    command.extend([
+      "--stream_data_file", str(stream_changes_file), str(stream_features_file)
+    ])
     
-    result += f"""
-    --output_dir {model_path} \
-    --batch_size {batch_size} \
-    --do_test \
-    --threshold {th} \
-    --eval_metric {eval_metric} \
-    """
-    return result
+  command.extend([
+    "--output_dir", str(model_path),
+    "--batch_size", str(batch_size),
+    "--do_test",
+    "--threshold", str(th),
+    "--eval_metric", str(eval_metric),
+  ])
+
+  return shlex.join(command)
 
 def get_lora_command(batch_classifier_dir, path, project, model_path, th, pretrained_model, eval_metric, batch_size, stream_changes_file=None, stream_features_file=None):
-    result = f"""
-  python {batch_classifier_dir}PEFT4CC/just-in-time/run_lora.py \
-   --test_data_file {path}/changes_test_online_{project}.pkl {path}/features_test_online_{project}.pkl """
+  command = [
+    "python",
+    os.path.join(batch_classifier_dir, "PEFT4CC/just-in-time/run_lora.py"),
+    "--test_data_file", f"{path}/changes_test_online_{project}.pkl", f"{path}/features_test_online_{project}.pkl",
+  ]
     
-    if stream_changes_file is not None and stream_features_file is not None:
-        result += f"""--stream_data_file {stream_changes_file} {stream_features_file} """
+  if stream_changes_file is not None and stream_features_file is not None:
+    command.extend([
+      "--stream_data_file", str(stream_changes_file), str(stream_features_file)
+    ])
 
-    result += f"""
-    --output_dir {model_path} \
-    --pretrained_model {pretrained_model} \
-    --batch_size {batch_size} \
-    --do_test \
-    --threshold {th} \
-    --eval_metric {eval_metric} \
-    """
+  command.extend([
+    "--output_dir", str(model_path),
+    "--pretrained_model", str(pretrained_model),
+    "--batch_size", str(batch_size),
+    "--do_test",
+    "--threshold", str(th),
+    "--eval_metric", str(eval_metric),
+  ])
 
-    return result
+  return shlex.join(command)
